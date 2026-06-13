@@ -10,6 +10,14 @@ const TIER_PROBABILITIES = [
   { tier: "bronze", min: 0,  max: 69,  prob: 0.10 }
 ];
 
+function getPositionCategory(pos) {
+  if (pos === "GK") return "GK";
+  if (["CB", "LB", "RB", "LWB", "RWB", "LCB", "RCB"].includes(pos)) return "DEF";
+  if (["CM", "CDM", "CAM", "LM", "RM", "LDM", "RDM", "LCM", "RCM"].includes(pos)) return "MID";
+  if (["ST", "CF", "LW", "RW", "LS", "RS", "LAM", "RAM"].includes(pos)) return "ATT";
+  return "MID";
+}
+
 function selectPlayerFromPoolWithTierRoll(pool, excludedSet) {
   const available = pool.filter(p => !excludedSet.has(p.id || p.name));
   if (available.length === 0) return null;
@@ -56,23 +64,32 @@ export class DraftManager {
 
   getEffectiveRating(player, slotPos) {
     if (!player) return 0;
-    if (player.position === slotPos) return player.rating;
+    
+    // Mild form modifier: OVR altered by lastMatchRating if present
+    let formMod = 0;
+    if (player.lastMatchRating !== undefined) {
+      if (player.lastMatchRating < 5.5) formMod = -1;
+      else if (player.lastMatchRating > 8.0) formMod = 1;
+    }
+    
+    const baseRating = player.rating + formMod;
+    if (player.position === slotPos) return baseRating;
 
     // Zero penalty for same-position family (e.g. CM playing LCM, CB playing LCB)
     if (getBasePosition(slotPos) === getBasePosition(player.position)) {
-      return player.rating;
+      return baseRating;
     }
 
     const compatible = isPositionCompatible(slotPos, player.position);
     if (compatible) {
-      return player.rating - 3;
+      return baseRating - 3;
     }
 
     if (player.position === "GK" || slotPos === "GK") {
-      return Math.max(30, player.rating - 45);
+      return Math.max(30, baseRating - 45);
     }
 
-    return Math.max(40, player.rating - 15);
+    return Math.max(40, baseRating - 15);
   }
 
   generateCardHTML(player, additionalClass = "", slotPos = null) {
@@ -102,6 +119,20 @@ export class DraftManager {
       rarity = "card-bronze";
     }
 
+    let chemBadge = "";
+    if (player.chemistry !== undefined && slotPos) {
+      chemBadge = `<span class="card-chem-badge">🧪 ${Math.round(player.chemistry)}</span>`;
+    }
+
+    let formArrow = "";
+    if (player.lastMatchRating !== undefined) {
+      if (player.lastMatchRating < 5.5) {
+        formArrow = `<div class="card-form-arrow down">▼</div>`;
+      } else if (player.lastMatchRating > 8.0) {
+        formArrow = `<div class="card-form-arrow up">▲</div>`;
+      }
+    }
+
     return `
       <div class="fut-card ${rarity} ${isGlowing ? 'glowing' : ''} ${additionalClass}" 
            data-player-id="${player.id || player.name}">
@@ -110,6 +141,7 @@ export class DraftManager {
             <span class="card-rating">${displayRating}${penaltyBadge}</span>
             <span class="card-pos">${player.position}</span>
           </div>
+          ${chemBadge}
           ${getFlagUrl(player.countryCode) ? `<img src="${getFlagUrl(player.countryCode, 40)}" class="card-flag-img" alt="${player.country}">` : `<span class="card-flag">${player.flag}</span>`}
         </div>
         <div class="card-avatar">${player.emoji}</div>
@@ -121,6 +153,7 @@ export class DraftManager {
             <span>${player.country.slice(0, 3).toUpperCase()}</span>
           </div>
         </div>
+        ${formArrow}
       </div>
     `;
   }
@@ -289,7 +322,7 @@ export class DraftManager {
     if (!container) return;
     container.innerHTML = "";
 
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < this.controller.draftBench.length; i++) {
       const slotEl = document.createElement('div');
       const isSelectedForSwap = this.selectedSwapSlot && this.selectedSwapSlot.type === "bench" && this.selectedSwapSlot.index === i;
       slotEl.className = "bench-slot" + (isSelectedForSwap ? " swap-selected" : "");
@@ -324,7 +357,7 @@ export class DraftManager {
   updateBenchCounter() {
     const filled = this.controller.draftBench.filter(p => p !== null).length;
     const counter = document.getElementById('bench-count');
-    if (counter) counter.textContent = `${filled} / 5`;
+    if (counter) counter.textContent = `${filled} / ${this.controller.draftBench.length}`;
   }
 
   updateChemistryLines() {
@@ -509,7 +542,21 @@ export class DraftManager {
 
         let playerChem = 0;
         const correctPos = isPositionCompatible(slot.pos, player.position);
-        playerChem += correctPos ? 4 : 1;
+        if (correctPos) {
+          playerChem += 4;
+        } else {
+          if (slot.pos === "GK" || player.position === "GK") {
+            playerChem -= 3;
+          } else {
+            const catSlot = getPositionCategory(slot.pos);
+            const catPlayer = getPositionCategory(player.position);
+            if ((catSlot === "DEF" && catPlayer === "ATT") || (catSlot === "ATT" && catPlayer === "DEF")) {
+              playerChem -= 1;
+            } else {
+              playerChem += 0;
+            }
+          }
+        }
 
         slot.conn.forEach(linkedId => {
           const neighbor = this.controller.draftStarters[linkedId];
@@ -528,7 +575,8 @@ export class DraftManager {
           playerChem += player.chemistryBonus;
         }
 
-        playerChem = Math.min(10, playerChem);
+        playerChem = Math.max(0, Math.min(10, playerChem));
+        player.chemistry = playerChem; // Store player chemistry on object
         chemistrySum += playerChem;
       });
     }

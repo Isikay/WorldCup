@@ -7,7 +7,7 @@ import { DraftManager } from './draft.js';
 import { TournamentManager } from './tournament.js';
 import { MuseumManager } from './museum.js';
 import { RewardManager } from './reward.js';
-import { getFlagUrl } from './data.js';
+import { getFlagUrl, isPositionCompatible, formations } from './data.js';
 
 class GameController {
   constructor() {
@@ -23,12 +23,13 @@ class GameController {
     this.selectedFormation = null;
     this.unlockedFormations = [];
     this.draftStarters = new Array(11).fill(null);
-    this.draftBench = new Array(5).fill(null);
+    this.draftBench = new Array(8).fill(null);
     this.activeDraftSlotIndex = -1;
     this.activeDraftSlotType = "starter";
     this.draftedPlayerIds = new Set();
     this.teamRating = 0;
     this.teamChemistry = 0;
+    this.performanceViewSide = "home";
 
     // Tournament state
     this.tournamentRound = 0;
@@ -37,8 +38,10 @@ class GameController {
     this.matchSpeed = 1;
     this.matchIntervalId = null;
     this.isMatchPaused = false;
+    this.isAutoSubEnabled = false;
     this.subsCountThisMatch = 0;
     this.lastActiveGameScreen = "screen-start";
+    this.isGameOver = false;
 
     // Stats records
     this.records = {
@@ -47,7 +50,8 @@ class GameController {
       highestRating: 0,
       highestChem: 0,
       totalWins: 0,
-      history: []
+      history: [],
+      leaderboard: []
     };
 
     // Sub managers initialization
@@ -227,6 +231,19 @@ class GameController {
       });
     });
 
+    // Auto-sub toggle button
+    const autoSubBtn = document.getElementById('btn-toggle-autosub');
+    if (autoSubBtn) {
+      autoSubBtn.addEventListener('click', () => {
+        audio.playClick();
+        this.isAutoSubEnabled = !this.isAutoSubEnabled;
+        this.updateAutoSubButtonUI();
+        if (this.currentMatchSimulator) {
+          this.currentMatchSimulator.isAutoSubEnabled = this.isAutoSubEnabled;
+        }
+      });
+    }
+
     // Substitutions modal controls
     document.getElementById('btn-close-subs').addEventListener('click', () => {
       audio.playClick();
@@ -266,6 +283,47 @@ class GameController {
       audio.playClick();
       this.screenManager.showScreen(this.lastActiveGameScreen || 'screen-start');
     });
+
+    // Stats tabs switching
+    document.getElementById('btn-stats-tab-history').addEventListener('click', () => {
+      audio.playClick();
+      document.getElementById('btn-stats-tab-history').classList.add('active');
+      document.getElementById('btn-stats-tab-leaderboard').classList.remove('active');
+      document.getElementById('stats-history-view').classList.remove('hidden');
+      document.getElementById('stats-leaderboard-view').classList.add('hidden');
+    });
+    document.getElementById('btn-stats-tab-leaderboard').addEventListener('click', () => {
+      audio.playClick();
+      document.getElementById('btn-stats-tab-leaderboard').classList.add('active');
+      document.getElementById('btn-stats-tab-history').classList.remove('active');
+      document.getElementById('stats-leaderboard-view').classList.remove('hidden');
+      document.getElementById('stats-history-view').classList.add('hidden');
+      this.museumManager.renderLeaderboard();
+    });
+
+    // Reset data button
+    const resetHistoryBtn = document.getElementById('btn-reset-history');
+    if (resetHistoryBtn) {
+      resetHistoryBtn.addEventListener('click', () => {
+        audio.playClick();
+        if (confirm(i18n.t('msg_confirm_reset'))) {
+          this.records = {
+            totalDrafts: 0,
+            trophiesWon: 0,
+            highestRating: 0,
+            highestChem: 0,
+            totalWins: 0,
+            history: [],
+            leaderboard: []
+          };
+          this.museumManager.saveStatsToStorage();
+          this.museumManager.renderStatsScreen();
+          this.museumManager.renderTrophyRoom();
+          document.getElementById('btn-stats-tab-history').click();
+          alert(i18n.currentLang === 'tr' ? "Tüm veriler sıfırlandı." : "All data has been reset.");
+        }
+      });
+    }
 
     // Pack click tearing trigger
     document.getElementById('pack-wrapper').addEventListener('click', () => {
@@ -320,6 +378,99 @@ class GameController {
       this.draftManager.updateChemistryLines();
       document.getElementById('modal-squad-management').classList.add('hidden');
     });
+
+    // Chemistry info button click
+    document.getElementById('btn-chem-info').addEventListener('click', () => {
+      audio.playClick();
+      alert(i18n.currentLang === 'tr' 
+        ? "🧪 KİMYA SİSTEMİ HESAPLAMASI:\n\n" +
+          "1. POZİSYON UYUMU:\n" +
+          "   - Oyuncu kendi veya uyumlu pozisyonda oynuyorsa +4 Kimya.\n" +
+          "   - Tamamen farklı bir pozisyonda oynuyorsa +1 Kimya.\n\n" +
+          "2. BAĞLANTILAR (Komşular):\n" +
+          "   - Aynı ülkeye sahip her komşu için +2.0 Kimya.\n" +
+          "   - Aynı yıla sahip her komşu için +1.5 Kimya.\n" +
+          "   - Aynı döneme (retro/modern) sahip her komşu için +0.5 Kimya.\n\n" +
+          "3. DİĞER ETKENLER:\n" +
+          "   - Oyuncunun her maç performansı/golü ekstra Kimya sağlar.\n" +
+          "   - Legend Perki retro oyunculara +2 Kimya ekler.\n\n" +
+          "* Bir oyuncunun alabileceği maksimum kimya 10'dur.\n" +
+          "* Takım Kimyası: (11 oyuncunun toplam kimyası / 110) * 100 olarak hesaplanır."
+        : "🧪 CHEMISTRY SYSTEM CALCULATION:\n\n" +
+          "1. POSITION MATCH:\n" +
+          "   - Plays in exact or compatible position: +4 Chem.\n" +
+          "   - Plays in out of position: +1 Chem.\n\n" +
+          "2. NEIGHBOR LINKS:\n" +
+          "   - Neighbor has same country: +2.0 Chem.\n" +
+          "   - Neighbor has same year: +1.5 Chem.\n" +
+          "   - Neighbor has same era (retro/modern): +0.5 Chem.\n\n" +
+          "3. OTHER FACTORS:\n" +
+          "   - Player matches/goals add bonus Chemistry.\n" +
+          "   - Legend Perk adds +2 Chem to retro players.\n\n" +
+          "* Maximum chemistry per player is capped at 10.\n" +
+          "* Team Chemistry is calculated as: (sum of 11 players' chemistry / 110) * 100."
+      );
+    });
+
+    // Close opponent squad view modal
+    document.getElementById('btn-close-opponent-squad').addEventListener('click', () => {
+      audio.playClick();
+      document.getElementById('modal-opponent-squad').classList.add('hidden');
+    });
+
+    // Performance tab home/away toggle
+    document.getElementById('btn-perf-show-home').addEventListener('click', () => {
+      audio.playClick();
+      this.performanceViewSide = "home";
+      document.getElementById('btn-perf-show-home').classList.add('active');
+      document.getElementById('btn-perf-show-home').style.background = "rgba(255,255,255,0.1)";
+      document.getElementById('btn-perf-show-home').style.color = "white";
+      document.getElementById('btn-perf-show-away').classList.remove('active');
+      document.getElementById('btn-perf-show-away').style.background = "rgba(0,0,0,0.2)";
+      document.getElementById('btn-perf-show-away').style.color = "rgba(255,255,255,0.6)";
+      this.renderMatchPerformanceUI();
+    });
+
+    document.getElementById('btn-perf-show-away').addEventListener('click', () => {
+      audio.playClick();
+      this.performanceViewSide = "away";
+      document.getElementById('btn-perf-show-away').classList.add('active');
+      document.getElementById('btn-perf-show-away').style.background = "rgba(255,255,255,0.1)";
+      document.getElementById('btn-perf-show-away').style.color = "white";
+      document.getElementById('btn-perf-show-home').classList.remove('active');
+      document.getElementById('btn-perf-show-home').style.background = "rgba(0,0,0,0.2)";
+      document.getElementById('btn-perf-show-home').style.color = "rgba(255,255,255,0.6)";
+      this.renderMatchPerformanceUI();
+    });
+
+    // Event delegation for inspectable teams
+    document.addEventListener('click', (e) => {
+      const inspectable = e.target.closest('.inspectable-team');
+      if (inspectable) {
+        audio.playClick();
+        const teamName = inspectable.getAttribute('data-team-name');
+        if (teamName) {
+          this.inspectTeamSquad(teamName);
+        }
+      }
+    });
+  }
+
+  updateAutoSubButtonUI() {
+    const btn = document.getElementById('btn-toggle-autosub');
+    if (!btn) return;
+    
+    if (this.isAutoSubEnabled) {
+      btn.setAttribute('data-i18n', 'btn_autosub_on');
+      btn.textContent = i18n.t('btn_autosub_on') || "AÇIK";
+      btn.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+      btn.style.color = '#a7f3d0';
+    } else {
+      btn.setAttribute('data-i18n', 'btn_autosub_off');
+      btn.textContent = i18n.t('btn_autosub_off') || "KAPALI";
+      btn.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+      btn.style.color = '#fca5a5';
+    }
   }
 
   resetForNewGame() {
@@ -331,7 +482,7 @@ class GameController {
     this.selectedFormation = null;
     this.unlockedFormations = [];
     this.draftStarters = new Array(11).fill(null);
-    this.draftBench = new Array(5).fill(null);
+    this.draftBench = new Array(8).fill(null);
     this.draftedPlayerIds.clear();
     this.teamRating = 0;
     this.teamChemistry = 0;
@@ -339,6 +490,7 @@ class GameController {
     this.bracketData = [];
     this.currentMatchSimulator = null;
     this.subsCountThisMatch = 0;
+    this.isGameOver = false;
     this.stopConfetti();
 
     if (this.draftManager) {
@@ -376,11 +528,12 @@ class GameController {
 
   resetDraftState() {
     this.draftStarters = new Array(11).fill(null);
-    this.draftBench = new Array(5).fill(null);
+    this.draftBench = new Array(8).fill(null);
     this.draftedPlayerIds.clear();
     this.teamRating = 0;
     this.teamChemistry = 0;
     this.subsCountThisMatch = 0;
+    this.isGameOver = false;
 
     if (this.draftManager) {
       this.draftManager.selectedSwapSlot = null;
@@ -517,8 +670,12 @@ class GameController {
       perk: this.managerPerk,
       starters: [...this.draftStarters],
       bench: [...this.draftBench],
-      formation: this.selectedFormation
+      formation: this.selectedFormation,
+      isUser: true
     };
+
+    // Optimize CPU opponent lineup (resting tired players) before match kickoff
+    this.optimizeCpuLineup(opponent);
 
     this.currentMatchSimulator = new MatchSimulator(
       userSquad, 
@@ -528,6 +685,8 @@ class GameController {
       this.difficulty,
       isKnockout
     );
+    this.currentMatchSimulator.isAutoSubEnabled = this.isAutoSubEnabled;
+    this.updateAutoSubButtonUI();
 
     document.getElementById('match-home-name').textContent = this.teamName;
     document.getElementById('match-home-badge').innerHTML = `<span class="badge-emoji">${this.teamEmoji}</span>`;
@@ -565,8 +724,16 @@ class GameController {
       document.getElementById('tab-performance-content').classList.add('hidden');
     }
 
+    this.performanceViewSide = "home";
+    document.getElementById('btn-perf-show-home').classList.add('active');
+    document.getElementById('btn-perf-show-home').style.background = "rgba(255,255,255,0.1)";
+    document.getElementById('btn-perf-show-home').style.color = "white";
+    document.getElementById('btn-perf-show-away').classList.remove('active');
+    document.getElementById('btn-perf-show-away').style.background = "rgba(0,0,0,0.2)";
+    document.getElementById('btn-perf-show-away').style.color = "rgba(255,255,255,0.6)";
+ 
     this.renderMatchPerformanceUI();
-
+ 
     this.subsCountThisMatch = 0;
     this.isMatchPaused = false;
     document.getElementById('btn-match-pause').textContent = "⏸";
@@ -658,10 +825,27 @@ class GameController {
     if (event.type === 'red') cssClass = 'card-red';
     
     item.className = `comm-item ${cssClass}`;
+
+    let teamPrefix = '';
+    let teamColor = '';
+
+    if (event.team === 'home') {
+      teamColor = this.teamColorPrimary || '#10b981';
+      teamPrefix = `<span style="color: ${teamColor}; font-weight: bold;">${this.teamEmoji || '🦁'} ${this.teamName}:</span> `;
+    } else if (event.team === 'away' && this.currentMatchSimulator && this.currentMatchSimulator.away) {
+      teamColor = this.currentMatchSimulator.away.colorPrimary || '#ffffff';
+      const awayName = this.currentMatchSimulator.away.name || 'Away';
+      const awayEmoji = this.currentMatchSimulator.away.emoji || '🏳️';
+      teamPrefix = `<span style="color: ${teamColor}; font-weight: bold;">${awayEmoji} ${awayName}:</span> `;
+    }
+
+    if (teamColor) {
+      item.style.borderLeft = `4px solid ${teamColor}`;
+    }
     
     item.innerHTML = `
       <span class="comm-time">${event.minute}'</span>
-      <span class="comm-text">${event.commentary}</span>
+      <span class="comm-text">${teamPrefix}${event.commentary}</span>
     `;
 
     list.insertBefore(item, list.firstChild);
@@ -813,27 +997,230 @@ class GameController {
     document.getElementById('post-match-panel').classList.remove('hidden');
   }
 
+  optimizeCpuLineup(team) {
+    if (!team || !team.starters || !team.bench || !team.formation) return;
+    let form = team.formation;
+    if (typeof form === 'string') {
+      form = formations[form] || formations["4-4-2"];
+    }
+
+    for (let idx = 0; idx < team.starters.length; idx++) {
+      const starter = team.starters[idx];
+      if (!starter) continue;
+
+      if (starter.stamina < 70) {
+        const slot = form.slots[idx];
+        let bestSubIdx = -1;
+        let bestSubRating = -1;
+
+        team.bench.forEach((sub, subIdx) => {
+          if (!sub || sub.stamina < 80) return;
+          const compatible = sub.position === slot.pos || isPositionCompatible(slot.pos, sub.position);
+          if (compatible && sub.rating > bestSubRating) {
+            bestSubIdx = subIdx;
+            bestSubRating = sub.rating;
+          }
+        });
+
+        if (bestSubIdx !== -1) {
+          const sub = team.bench[bestSubIdx];
+          team.starters[idx] = sub;
+          team.bench[bestSubIdx] = starter;
+        }
+      }
+    }
+  }
+
+  findTeamByName(teamName) {
+    if (this.teamName === teamName) {
+      return {
+        name: this.teamName,
+        emoji: this.teamEmoji,
+        rating: this.teamRating,
+        chemistry: this.teamChemistry,
+        starters: this.draftStarters,
+        bench: this.draftBench,
+        isUser: true,
+        colorPrimary: this.teamColorPrimary,
+        colorSecondary: this.teamColorSecondary
+      };
+    }
+    if (this.groups) {
+      for (const gk in this.groups) {
+        const team = this.groups[gk].find(t => t.name === teamName);
+        if (team) return team;
+      }
+    }
+    if (this.bracketData) {
+      for (const round of this.bracketData) {
+        for (const match of round) {
+          if (match.team1 && match.team1.name === teamName) return match.team1;
+          if (match.team2 && match.team2.name === teamName) return match.team2;
+        }
+      }
+    }
+    return null;
+  }
+
+  inspectTeamSquad(teamName) {
+    const team = this.findTeamByName(teamName);
+    if (!team) return;
+
+    document.getElementById('opponent-squad-title').textContent = `${team.emoji || "🏳️"} ${team.name} (${i18n.currentLang === 'tr' ? 'Kadro' : 'Squad'})`;
+
+    const startersList = document.getElementById('opponent-starters-list');
+    const benchList = document.getElementById('opponent-bench-list');
+    startersList.innerHTML = "";
+    benchList.innerHTML = "";
+
+    const renderRoster = (players, container) => {
+      players.forEach(player => {
+        if (!player) return;
+        const stamina = Math.round(player.stamina !== undefined ? player.stamina : 100);
+        
+        let staminaClass = "stamina-high";
+        if (stamina < 40) staminaClass = "stamina-low";
+        else if (stamina < 70) staminaClass = "stamina-medium";
+
+        let formArrow = "";
+        if (player.lastMatchRating !== undefined) {
+          if (player.lastMatchRating < 5.5) {
+            formArrow = `<span style="color:#ef4444; margin-left: 0.25rem;">▼</span>`;
+          } else if (player.lastMatchRating > 8.0) {
+            formArrow = `<span style="color:#10b981; margin-left: 0.25rem;">▲</span>`;
+          }
+        }
+
+        const item = document.createElement('div');
+        item.className = "sub-item-card";
+        item.style.cursor = "default";
+        item.innerHTML = `
+          <div class="sub-item-info">
+            <span class="sub-item-rating">${player.rating}</span>
+            <span class="sub-item-name">${player.name} ${formArrow}</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span style="font-size: 0.75rem; font-weight: 600; color: ${stamina < 40 ? '#ef4444' : (stamina < 70 ? '#f59e0b' : '#a7f3d0')}">⚡${stamina}%</span>
+            <span class="sub-item-pos">${player.position}</span>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    };
+
+    if (team.starters) renderRoster(team.starters, startersList);
+    if (team.bench) renderRoster(team.bench, benchList);
+
+    document.getElementById('modal-opponent-squad').classList.remove('hidden');
+  }
+
+  applyPostMatchStaminaToCpu(sim, team1, team2) {
+    const homeSimDataMap = new Map();
+    [...sim.home.starters, ...sim.home.bench].forEach(p => {
+      if (!p) return;
+      const key = p.id || p.name;
+      if (!homeSimDataMap.has(key)) {
+        homeSimDataMap.set(key, { stamina: p.stamina, matchRating: p.matchRating });
+      }
+    });
+
+    team1.starters.forEach((mainPlayer) => {
+      if (!mainPlayer) return;
+      const key = mainPlayer.id || mainPlayer.name;
+      if (homeSimDataMap.has(key)) {
+        const simData = homeSimDataMap.get(key);
+        mainPlayer.stamina = simData.stamina;
+        mainPlayer.lastMatchRating = simData.matchRating;
+      }
+      delete mainPlayer.injuryPenalty;
+    });
+
+    team1.bench.forEach((mainPlayer) => {
+      if (!mainPlayer) return;
+      const key = mainPlayer.id || mainPlayer.name;
+      if (homeSimDataMap.has(key)) {
+        const simData = homeSimDataMap.get(key);
+        mainPlayer.stamina = simData.stamina;
+        mainPlayer.lastMatchRating = simData.matchRating;
+      }
+      delete mainPlayer.injuryPenalty;
+    });
+
+    const awaySimDataMap = new Map();
+    [...sim.away.starters, ...sim.away.bench].forEach(p => {
+      if (!p) return;
+      const key = p.id || p.name;
+      if (!awaySimDataMap.has(key)) {
+        awaySimDataMap.set(key, { stamina: p.stamina, matchRating: p.matchRating });
+      }
+    });
+
+    team2.starters.forEach((mainPlayer) => {
+      if (!mainPlayer) return;
+      const key = mainPlayer.id || mainPlayer.name;
+      if (awaySimDataMap.has(key)) {
+        const simData = awaySimDataMap.get(key);
+        mainPlayer.stamina = simData.stamina;
+        mainPlayer.lastMatchRating = simData.matchRating;
+      }
+      delete mainPlayer.injuryPenalty;
+    });
+
+    team2.bench.forEach((mainPlayer) => {
+      if (!mainPlayer) return;
+      const key = mainPlayer.id || mainPlayer.name;
+      if (awaySimDataMap.has(key)) {
+        const simData = awaySimDataMap.get(key);
+        mainPlayer.stamina = simData.stamina;
+        mainPlayer.lastMatchRating = simData.matchRating;
+      }
+      delete mainPlayer.injuryPenalty;
+    });
+  }
+
+  simulateBackgroundMatch(team1, team2, stageName, isKnockout) {
+    this.optimizeCpuLineup(team1);
+    this.optimizeCpuLineup(team2);
+
+    const sim = new MatchSimulator(team1, team2, stageName, false, 'normal', isKnockout);
+    while (!sim.isOver) {
+      sim.tick();
+    }
+
+    this.applyPostMatchStaminaToCpu(sim, team1, team2);
+
+    return {
+      score1: sim.home.score,
+      score2: sim.away.score,
+      winner: sim.home.score > sim.away.score ? team1 : team2
+    };
+  }
+
   handlePostMatchCompletion() {
     const sim = this.currentMatchSimulator;
     const isWin = sim.home.score > sim.away.score;
 
     this.stopConfetti();
 
-    // Build a map of player id/name -> stamina from sim starters + bench
+    // Build a map of player id/name -> { stamina, matchRating } from sim starters + bench
     const userScorers = sim.home.goals.map(g => g.player);
-    const staminaMap = new Map();
+    const playerSimDataMap = new Map();
     [...sim.home.starters, ...sim.home.bench].forEach(p => {
       if (!p) return;
       const key = p.id || p.name;
-      if (!staminaMap.has(key)) staminaMap.set(key, p.stamina);
+      if (!playerSimDataMap.has(key)) {
+        playerSimDataMap.set(key, { stamina: p.stamina, matchRating: p.matchRating });
+      }
     });
 
     // Update draftStarters using identity match (not array index, since subs may have shuffled)
     this.draftStarters.forEach((mainPlayer) => {
       if (!mainPlayer) return;
       const key = mainPlayer.id || mainPlayer.name;
-      if (staminaMap.has(key)) {
-        mainPlayer.stamina = staminaMap.get(key);
+      if (playerSimDataMap.has(key)) {
+        const simData = playerSimDataMap.get(key);
+        mainPlayer.stamina = simData.stamina;
+        mainPlayer.lastMatchRating = simData.matchRating;
       }
       // Clear match-only injury penalty
       delete mainPlayer.injuryPenalty;
@@ -848,11 +1235,48 @@ class GameController {
     this.draftBench.forEach((mainPlayer) => {
       if (!mainPlayer) return;
       const key = mainPlayer.id || mainPlayer.name;
-      if (staminaMap.has(key)) {
-        mainPlayer.stamina = staminaMap.get(key);
+      if (playerSimDataMap.has(key)) {
+        const simData = playerSimDataMap.get(key);
+        mainPlayer.stamina = simData.stamina;
+        mainPlayer.lastMatchRating = simData.matchRating;
       }
       delete mainPlayer.injuryPenalty;
     });
+
+    // Update opponent (CPU team) players' stamina & lastMatchRating
+    const opponent = sim.awayOriginal;
+    if (opponent && opponent.starters && opponent.bench) {
+      const awaySimDataMap = new Map();
+      [...sim.away.starters, ...sim.away.bench].forEach(p => {
+        if (!p) return;
+        const key = p.id || p.name;
+        if (!awaySimDataMap.has(key)) {
+          awaySimDataMap.set(key, { stamina: p.stamina, matchRating: p.matchRating });
+        }
+      });
+
+      opponent.starters.forEach((mainPlayer) => {
+        if (!mainPlayer) return;
+        const key = mainPlayer.id || mainPlayer.name;
+        if (awaySimDataMap.has(key)) {
+          const simData = awaySimDataMap.get(key);
+          mainPlayer.stamina = simData.stamina;
+          mainPlayer.lastMatchRating = simData.matchRating;
+        }
+        delete mainPlayer.injuryPenalty;
+      });
+
+      opponent.bench.forEach((mainPlayer) => {
+        if (!mainPlayer) return;
+        const key = mainPlayer.id || mainPlayer.name;
+        if (awaySimDataMap.has(key)) {
+          const simData = awaySimDataMap.get(key);
+          mainPlayer.stamina = simData.stamina;
+          mainPlayer.lastMatchRating = simData.matchRating;
+        }
+        delete mainPlayer.injuryPenalty;
+      });
+    }
 
     this.draftManager.recalculateDraftStats();
 
@@ -874,16 +1298,12 @@ class GameController {
         }
       }
 
+      const stageName = `${i18n.currentLang === 'tr' ? 'Grup Maçı' : 'Group Match'} ${this.tournamentRound + 1}`;
       currentFixtures.forEach(f => {
         if (f.played) return;
-        const skill1 = f.team1.rating;
-        const skill2 = f.team2.rating;
-        let s1 = Math.floor(Math.random() * 4);
-        let s2 = Math.floor(Math.random() * 4);
-        if (skill1 > skill2) s1 += Math.random() > 0.5 ? 1 : 0;
-        else if (skill2 > skill1) s2 += Math.random() > 0.5 ? 1 : 0;
-        f.score1 = s1;
-        f.score2 = s2;
+        const res = this.simulateBackgroundMatch(f.team1, f.team2, stageName, false);
+        f.score1 = res.score1;
+        f.score2 = res.score2;
         f.played = true;
       });
 
@@ -939,27 +1359,15 @@ class GameController {
 
       userMatch.winner = isWin ? userTeamInBracket : opponentInBracket;
 
+      const stageKeys = [i18n.t('stage_qf'), i18n.t('stage_sf'), i18n.t('stage_final')];
+      const stageName = stageKeys[this.tournamentRound - 3] || "Cup Round";
       currentRoundMatches.forEach((match, idx) => {
         if (idx === userMatchIdx) return;
-        
-        const skill1 = match.team1.rating;
-        const skill2 = match.team2.rating;
-        
-        let s1 = Math.floor(Math.random() * 4);
-        let s2 = Math.floor(Math.random() * 4);
-
-        if (skill1 > skill2) s1 += 1;
-        else if (skill2 > skill1) s2 += 1;
-
-        if (s1 === s2) {
-          if (Math.random() > 0.5) s1 += 1;
-          else s2 += 1;
-        }
-
-        match.score1 = s1;
-        match.score2 = s2;
+        const res = this.simulateBackgroundMatch(match.team1, match.team2, stageName, true);
+        match.score1 = res.score1;
+        match.score2 = res.score2;
         match.played = true;
-        match.winner = s1 > s2 ? match.team1 : match.team2;
+        match.winner = res.winner;
       });
 
       if (isWin) {
@@ -981,10 +1389,12 @@ class GameController {
     }
 
     if (isEliminated) {
+      this.isGameOver = true;
       this.museumManager.saveRunHistory("loss");
       this.screenManager.showScreen('screen-stats');
       this.museumManager.renderStatsScreen();
     } else if (wonFinal) {
+      this.isGameOver = true;
       this.records.totalWins++;
       this.records.trophiesWon++;
       this.museumManager.saveRunHistory("win");
@@ -1006,7 +1416,10 @@ class GameController {
     if (!container || !this.currentMatchSimulator) return;
     container.innerHTML = "";
 
-    this.currentMatchSimulator.home.starters.forEach((player, idx) => {
+    const side = this.performanceViewSide || "home";
+    const team = side === "home" ? this.currentMatchSimulator.home : this.currentMatchSimulator.away;
+
+    team.starters.forEach((player, idx) => {
       if (!player) return;
 
       const stamina = Math.round(player.stamina);
@@ -1022,6 +1435,12 @@ class GameController {
 
       const item = document.createElement('div');
       item.className = "perf-item";
+      if (side === "home") {
+        item.style.cursor = "pointer";
+      } else {
+        item.style.cursor = "default";
+      }
+
       item.innerHTML = `
         <div class="perf-player-info">
           <div class="perf-name-row">
@@ -1038,11 +1457,13 @@ class GameController {
         <div class="perf-rating-badge ${ratingClass}">${rating}</div>
       `;
 
-      item.addEventListener('click', () => {
-        audio.playClick();
-        this.renderSubstitutionsModal(idx);
-        document.getElementById('modal-substitutions').classList.remove('hidden');
-      });
+      if (side === "home") {
+        item.addEventListener('click', () => {
+          audio.playClick();
+          this.renderSubstitutionsModal(idx);
+          document.getElementById('modal-substitutions').classList.remove('hidden');
+        });
+      }
 
       container.appendChild(item);
     });
@@ -1192,7 +1613,8 @@ class GameController {
           this.currentMatchSimulator.home.starters[index] = p1;
           this.currentMatchSimulator._recalculateHomeWeight();
 
-          this.draftStarters = [...this.currentMatchSimulator.home.starters];
+          // Keep starting lineup order unchanged during matches
+          // this.draftStarters = [...this.currentMatchSimulator.home.starters];
           this.selectedMatchSwapSlot = null;
 
           this.renderMatchPerformanceUI();
@@ -1218,8 +1640,9 @@ class GameController {
           if (res.success) {
             document.getElementById('modal-substitutions').classList.add('hidden');
             this.appendCommentary(res.event);
-            this.draftStarters = [...this.currentMatchSimulator.home.starters];
-            this.draftBench = [...this.currentMatchSimulator.home.bench];
+            // Keep starting lineup order unchanged during matches
+            // this.draftStarters = [...this.currentMatchSimulator.home.starters];
+            // this.draftBench = [...this.currentMatchSimulator.home.bench];
             this.subsCountThisMatch++;
             this.draftManager.recalculateDraftStats();
             this.renderMatchPerformanceUI();

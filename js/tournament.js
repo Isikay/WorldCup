@@ -1,6 +1,90 @@
 import { i18n } from './i18n.js';
 import { audio } from './audio.js';
-import { cpuTeams, getFlagUrl, formations } from './data.js';
+import { cpuTeams, getFlagUrl, formations, getPlayersForCpuTeam, generateFictionalPlayer, isPositionCompatible } from './data.js';
+
+function initializeCpuTeamRoster(team) {
+  const dbPlayers = getPlayersForCpuTeam(team.name);
+  const unassigned = [...dbPlayers].sort((a, b) => b.rating - a.rating);
+
+  const formKey = team.formation || "4-4-2";
+  const form = formations[formKey] || formations["4-4-2"];
+  team.formation = formKey; // Store the formation string key so simulator/rotations can resolve it
+  
+  const parts = team.name.split(' ');
+  let countryTR = parts[0];
+  let year = 2002;
+  if (team.name.startsWith("G. Kore")) {
+    countryTR = "G. Kore";
+    year = parseInt(parts[2], 10);
+  } else if (team.name.startsWith("Sovyetler Birliği")) {
+    countryTR = "Sovyetler Birliği";
+    year = parseInt(parts[2], 10);
+  } else {
+    countryTR = parts[0];
+    year = parseInt(parts[1], 10);
+  }
+  
+  const trToEn = {
+    "Brezilya": "Brazil", "Fransa": "France", "Arjantin": "Argentina", "İspanya": "Spain",
+    "Almanya": "Germany", "İtalya": "Italy", "Hollanda": "Netherlands", "Uruguay": "Uruguay",
+    "İngiltere": "England", "Portekiz": "Portugal", "Türkiye": "Türkiye", "Hırvatistan": "Croatia",
+    "Macaristan": "Hungary", "Belçika": "Belgium", "Fas": "Morocco", "Japonya": "Japan",
+    "İsveç": "Sweden", "Bulgaristan": "Bulgaria", "Senegal": "Senegal", "G. Kore": "South Korea",
+    "Sovyetler Birliği": "Soviet Union"
+  };
+  const countryEn = trToEn[countryTR] || countryTR;
+
+  team.starters = new Array(11).fill(null);
+  team.bench = [];
+
+  const gkIdx = form.slots.findIndex(s => s.pos === "GK");
+  if (gkIdx !== -1) {
+    const gkPlayer = unassigned.find(p => p.position === "GK");
+    if (gkPlayer) {
+      team.starters[gkIdx] = { ...gkPlayer, stamina: 100, matchRating: 7.0 };
+      unassigned.splice(unassigned.indexOf(gkPlayer), 1);
+    }
+  }
+
+  form.slots.forEach((slot, idx) => {
+    if (team.starters[idx] !== null) return;
+    const matching = unassigned.find(p => isPositionCompatible(slot.pos, p.position));
+    if (matching) {
+      team.starters[idx] = { ...matching, stamina: 100, matchRating: 7.0 };
+      unassigned.splice(unassigned.indexOf(matching), 1);
+    }
+  });
+
+  form.slots.forEach((slot, idx) => {
+    if (team.starters[idx] !== null) return;
+    if (unassigned.length > 0) {
+      const p = unassigned.shift();
+      team.starters[idx] = { ...p, stamina: 100, matchRating: 7.0 };
+    }
+  });
+
+  let uniqueIdx = 1;
+  form.slots.forEach((slot, idx) => {
+    if (team.starters[idx] !== null) return;
+    const fictional = generateFictionalPlayer(countryEn, year, slot.pos, team.rating, uniqueIdx++);
+    fictional.matchRating = 7.0;
+    team.starters[idx] = fictional;
+  });
+
+  while (team.bench.length < 8 && unassigned.length > 0) {
+    const p = unassigned.shift();
+    team.bench.push({ ...p, stamina: 100, matchRating: 7.0 });
+  }
+
+  const benchPositions = ["GK", "CB", "LB", "CM", "RM", "LM", "ST", "ST"];
+  while (team.bench.length < 8) {
+    const missingIndex = team.bench.length;
+    const targetPos = benchPositions[missingIndex] || "CM";
+    const fictional = generateFictionalPlayer(countryEn, year, targetPos, team.rating - 3, uniqueIdx++);
+    fictional.matchRating = 7.0;
+    team.bench.push(fictional);
+  }
+}
 
 export class TournamentManager {
   constructor(controller) {
@@ -26,6 +110,11 @@ export class TournamentManager {
 
     const pool = [...cpuTeams].sort(() => Math.random() - 0.5);
     const chosenCpu = pool.slice(0, 15);
+    
+    chosenCpu.forEach(team => {
+      initializeCpuTeamRoster(team);
+    });
+
     const allTeams = [userTeam, ...chosenCpu].sort(() => Math.random() - 0.5);
 
     this.controller.groups = {
@@ -135,7 +224,7 @@ export class TournamentManager {
         rowsHTML += `
           <tr class="${rowClass}">
             <td style="text-align:center;"><span class="rank-badge ${rankClass}">${idx + 1}</span></td>
-            <td style="font-weight:600; vertical-align: middle;">${logoHtml} ${row.name}</td>
+            <td style="font-weight:600; vertical-align: middle; cursor: pointer;" class="inspectable-team" data-team-name="${row.name}">${logoHtml} ${row.name}</td>
             <td style="text-align:center;">${row.played}</td>
             <td style="text-align:center;">${row.won}</td>
             <td style="text-align:center;">${row.drawn}</td>
@@ -202,8 +291,8 @@ export class TournamentManager {
         const t1Logo = t1FlagUrl ? `<img src="${t1FlagUrl}" class="team-flag-img" alt="">` : (match.team1 ? `<span class="team-emoji">${match.team1.emoji}</span>` : "");
         const t2Logo = t2FlagUrl ? `<img src="${t2FlagUrl}" class="team-flag-img" alt="">` : (match.team2 ? `<span class="team-emoji">${match.team2.emoji}</span>` : "");
 
-        const t1Name = match.team1 ? `${t1Logo} ${match.team1.name}` : "...";
-        const t2Name = match.team2 ? `${t2Logo} ${match.team2.name}` : "...";
+        const t1Name = match.team1 ? `<span class="inspectable-team" data-team-name="${match.team1.name}" style="cursor:pointer;">${t1Logo} ${match.team1.name}</span>` : "...";
+        const t2Name = match.team2 ? `<span class="inspectable-team" data-team-name="${match.team2.name}" style="cursor:pointer;">${t2Logo} ${match.team2.name}</span>` : "...";
 
         const t1Score = match.score1 !== null ? match.score1 : "";
         const t2Score = match.score2 !== null ? match.score2 : "";
@@ -274,6 +363,19 @@ export class TournamentManager {
       }
       document.getElementById('vs-home-name').textContent = this.controller.teamName;
       document.getElementById('vs-away-name').textContent = opponent.name;
+
+      const vsAwayTeam = document.querySelector('.vs-team.away');
+      if (vsAwayTeam) {
+        vsAwayTeam.setAttribute('data-team-name', opponent.name);
+        vsAwayTeam.style.cursor = 'pointer';
+        vsAwayTeam.classList.add('inspectable-team');
+      }
+      const vsHomeTeam = document.querySelector('.vs-team.home');
+      if (vsHomeTeam) {
+        vsHomeTeam.setAttribute('data-team-name', this.controller.teamName);
+        vsHomeTeam.style.cursor = 'pointer';
+        vsHomeTeam.classList.add('inspectable-team');
+      }
 
       const analysisBox = document.getElementById('opponent-analysis-box');
       if (analysisBox) {
@@ -400,6 +502,28 @@ export class TournamentManager {
         p.stamina = Math.min(100, (p.stamina || 100) + 30);
       }
     });
+
+    // Recover CPU players for all teams in groups
+    if (this.controller.groups) {
+      ['A', 'B', 'C', 'D'].forEach(gk => {
+        const gTeams = this.controller.groups[gk];
+        if (gTeams) {
+          gTeams.forEach(team => {
+            if (team.isUser) return; // User already recovered above
+            if (team.starters) {
+              team.starters.forEach(p => {
+                if (p) p.stamina = Math.min(100, (p.stamina || 100) + 10);
+              });
+            }
+            if (team.bench) {
+              team.bench.forEach(p => {
+                if (p) p.stamina = Math.min(100, (p.stamina || 100) + 30);
+              });
+            }
+          });
+        }
+      });
+    }
   }
 
   advanceToNextTournamentStep() {

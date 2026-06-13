@@ -1,5 +1,16 @@
 import { i18n } from './i18n.js';
 
+const defaultLeaderboard = [
+  { name: "Sir Alex Ferguson", team: "🔴 Man United '99", trophies: 6, wins: 32, rating: 93, isUser: false },
+  { name: "Pep Guardiola", team: "🔵 Barcelona '11", trophies: 5, wins: 28, rating: 95, isUser: false },
+  { name: "Carlo Ancelotti", team: "⚫ Milan '07", trophies: 4, wins: 25, rating: 92, isUser: false },
+  { name: "Vicente del Bosque", team: "⚪ Real Madrid '02", trophies: 3, wins: 19, rating: 91, isUser: false },
+  { name: "Fatih Terim", team: "🟡 Galatasaray '00", trophies: 3, wins: 21, rating: 90, isUser: false },
+  { name: "Didier Deschamps", team: "🔵 France '18", trophies: 2, wins: 15, rating: 90, isUser: false },
+  { name: "Joachim Löw", team: "⚫ Germany '14", trophies: 2, wins: 16, rating: 89, isUser: false },
+  { name: "Şenol Güneş", team: "🔴 Turkey '02", trophies: 1, wins: 12, rating: 88, isUser: false }
+];
+
 export class MuseumManager {
   constructor(controller) {
     this.controller = controller;
@@ -13,6 +24,9 @@ export class MuseumManager {
       } catch (e) {
         console.error("Failed to parse records", e);
       }
+    }
+    if (!this.controller.records.leaderboard || this.controller.records.leaderboard.length === 0) {
+      this.controller.records.leaderboard = [...defaultLeaderboard];
     }
   }
 
@@ -31,14 +45,16 @@ export class MuseumManager {
     }
 
     const outcomeLabels = {
-      0: "outcome_r16",
-      1: "outcome_qf",
-      2: "outcome_sf",
-      3: "outcome_final"
+      0: "outcome_groups",
+      1: "outcome_groups",
+      2: "outcome_groups",
+      3: "outcome_qf",
+      4: "outcome_sf",
+      5: "outcome_final"
     };
 
     let resultText = i18n.t(outcomeLabels[this.controller.tournamentRound]);
-    if (outcome === "win" && this.controller.tournamentRound === 3) {
+    if (outcome === "win" && this.controller.tournamentRound === 5) {
       resultText = i18n.t("outcome_champ");
     }
 
@@ -57,6 +73,144 @@ export class MuseumManager {
     }
 
     this.saveStatsToStorage();
+
+    // Trigger cloud-synced leaderboard update
+    const userEntry = {
+      name: this.controller.managerName || "Siz",
+      team: `${this.controller.teamEmoji} ${this.controller.teamName}`,
+      trophies: this.controller.records.trophiesWon,
+      wins: this.controller.records.totalWins,
+      rating: this.controller.records.highestRating,
+      isUser: true
+    };
+    this.syncAndRenderLeaderboard(userEntry);
+  }
+
+  async syncAndRenderLeaderboard(newEntry = null) {
+    const BUCKET_ID = 'wcdraft_lb_p3k9m2a7';
+    const KEY = 'leaderboard';
+    const URL = `https://kvdb.io/${BUCKET_ID}/${KEY}`;
+    
+    let currentList = [];
+    
+    try {
+      const res = await fetch(URL);
+      if (res.ok) {
+        const text = await res.text();
+        if (text.trim()) {
+          currentList = JSON.parse(text);
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to fetch cloud leaderboard, falling back to local:", err);
+    }
+    
+    // Fallback if cloud list empty
+    if (currentList.length === 0) {
+      currentList = this.controller.records.leaderboard && this.controller.records.leaderboard.length > 0
+        ? [...this.controller.records.leaderboard]
+        : [...defaultLeaderboard];
+    }
+    
+    // Merge newEntry
+    if (newEntry) {
+      let userIdx = currentList.findIndex(e => e.isUser || (e.name === newEntry.name && e.team === newEntry.team));
+      if (userIdx !== -1) {
+        const existing = currentList[userIdx];
+        // Only update if stats are higher
+        if (newEntry.trophies > existing.trophies || 
+           (newEntry.trophies === existing.trophies && newEntry.wins > existing.wins) ||
+           (newEntry.trophies === existing.trophies && newEntry.wins === existing.wins && newEntry.rating > existing.rating)) {
+          currentList[userIdx] = { ...existing, ...newEntry };
+        }
+      } else {
+        currentList.push(newEntry);
+      }
+    }
+    
+    // Sort
+    currentList.sort((a, b) => {
+      if (b.trophies !== a.trophies) return b.trophies - a.trophies;
+      if (b.wins !== a.wins) return b.wins - a.wins;
+      return b.rating - a.rating;
+    });
+    
+    // Trim
+    currentList = currentList.slice(0, 30);
+    
+    // Save locally
+    this.controller.records.leaderboard = currentList;
+    this.saveStatsToStorage();
+    
+    // Try to upload
+    try {
+      await fetch(URL, {
+        method: 'POST',
+        body: JSON.stringify(currentList),
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+    } catch (err) {
+      console.error("Failed to upload leaderboard to cloud:", err);
+    }
+    
+    // Render in UI
+    this.renderLeaderboardUI(currentList);
+  }
+
+  renderLeaderboard() {
+    this.syncAndRenderLeaderboard(null);
+  }
+
+  renderLeaderboardUI(list) {
+    const tbody = document.getElementById('leaderboard-table-body');
+    if (!tbody) return;
+    tbody.innerHTML = "";
+
+    list.forEach((item, index) => {
+      const tr = document.createElement('tr');
+      if (item.isUser) {
+        tr.style.background = "rgba(16, 185, 129, 0.15)";
+        tr.style.border = "1px solid var(--primary)";
+      }
+      
+      const rankTd = document.createElement('td');
+      rankTd.style.fontWeight = "700";
+      rankTd.textContent = index + 1;
+
+      const nameTd = document.createElement('td');
+      nameTd.style.fontWeight = "700";
+      nameTd.textContent = item.name;
+      
+      const teamSpan = document.createElement('span');
+      teamSpan.style.fontSize = "0.8rem";
+      teamSpan.style.fontWeight = "400";
+      teamSpan.style.color = "var(--text-secondary)";
+      teamSpan.style.marginLeft = "0.5rem";
+      teamSpan.textContent = `(${item.team})`;
+      nameTd.appendChild(teamSpan);
+
+      const trophiesTd = document.createElement('td');
+      trophiesTd.style.textAlign = "center";
+      trophiesTd.textContent = `🏆 ${item.trophies}`;
+
+      const winsTd = document.createElement('td');
+      winsTd.style.textAlign = "center";
+      winsTd.textContent = `✌️ ${item.wins}`;
+
+      const ratingTd = document.createElement('td');
+      ratingTd.style.textAlign = "center";
+      ratingTd.textContent = `⭐ ${item.rating}`;
+
+      tr.appendChild(rankTd);
+      tr.appendChild(nameTd);
+      tr.appendChild(trophiesTd);
+      tr.appendChild(winsTd);
+      tr.appendChild(ratingTd);
+
+      tbody.appendChild(tr);
+    });
   }
 
   renderStatsScreen() {
@@ -89,9 +243,8 @@ export class MuseumManager {
       const hasActiveGame = this.controller.draftStarters.some(p => p !== null) && 
                            (this.controller.tournamentRound >= 0 && this.controller.tournamentRound < 6);
       
-      const isGameOver = (this.controller.tournamentRound === 3 && this.controller.currentMatchSimulator && this.controller.currentMatchSimulator.isOver && this.controller.currentMatchSimulator.away.score > this.controller.currentMatchSimulator.home.score) ||
-                         (this.controller.tournamentRound === 5 && this.controller._confettiRunning === false); // won final or eliminated
-
+      const isGameOver = this.controller.isGameOver;
+      
       if (hasActiveGame && !isGameOver) {
         backBtn.classList.remove('hidden');
         backBtn.style.display = 'inline-block';
@@ -100,6 +253,9 @@ export class MuseumManager {
         backBtn.style.display = 'none';
       }
     }
+
+    // Start background sync for the leaderboard tab
+    this.syncAndRenderLeaderboard(null);
   }
 
   renderTrophyRoom() {

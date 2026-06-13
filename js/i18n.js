@@ -88,6 +88,7 @@ const translations = {
     outcome_sf: "Yarı Finalist",
     outcome_qf: "Çeyrek Finalist",
     outcome_r16: "Son 16 Turu",
+    outcome_groups: "Grup Aşaması",
     status_winner: "Şampiyon",
     status_eliminated: "Elendi",
 
@@ -116,6 +117,10 @@ const translations = {
     // --- NEW KEYS ---
     tab_groups: "Grup Aşaması",
     tab_bracket: "Eleme Aşaması",
+    tab_history: "Geçmiş",
+    tab_leaderboard: "Liderlik Tablosu",
+    btn_reset_history: "Verileri Sıfırla",
+    msg_confirm_reset: "Tüm oyun istatistikleriniz, draft geçmişiniz ve kupa odanız sıfırlanacak. Emin misiniz?",
     btn_tab_commentary: "Maç Anlatımı",
     btn_tab_performance: "Kadro & Performans",
     // Difficulty
@@ -132,6 +137,9 @@ const translations = {
     tactic_attacking: "Hücum",
     tactic_balanced: "Dengeli",
     tactic_defensive: "Savunma",
+    label_autosub: "OTO-DEĞİŞİKLİK",
+    btn_autosub_on: "AÇIK",
+    btn_autosub_off: "KAPALI",
 
     // Post-match stats
     stat_possession: "Topa Sahip Olma",
@@ -246,6 +254,7 @@ const translations = {
     outcome_sf: "Semi Finalist",
     outcome_qf: "Quarter Finalist",
     outcome_r16: "Round of 16",
+    outcome_groups: "Group Stage",
     status_winner: "Champion",
     status_eliminated: "Eliminated",
 
@@ -274,6 +283,10 @@ const translations = {
     // --- NEW KEYS ---
     tab_groups: "Group Stage",
     tab_bracket: "Knockout Bracket",
+    tab_history: "History",
+    tab_leaderboard: "Leaderboard",
+    btn_reset_history: "Reset Data",
+    msg_confirm_reset: "All your game stats, draft history, and trophy cabinet will be reset. Are you sure?",
     btn_tab_commentary: "Match Commentary",
     btn_tab_performance: "Squad & Performance",
     // Difficulty
@@ -290,6 +303,9 @@ const translations = {
     tactic_attacking: "Attack",
     tactic_balanced: "Balanced",
     tactic_defensive: "Defense",
+    label_autosub: "AUTO-SUB",
+    btn_autosub_on: "ON",
+    btn_autosub_off: "OFF",
 
     // Post-match stats
     stat_possession: "Possession",

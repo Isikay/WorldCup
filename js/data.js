@@ -8359,7 +8359,7 @@ export function getPlayersForCpuTeam(teamName) {
     "Uruguay": "Uruguay",
     "İngiltere": "England",
     "Portekiz": "Portugal",
-    "Türkiye": "Turkey",
+    "Türkiye": "Türkiye",
     "Hırvatistan": "Croatia",
     "Macaristan": "Hungary",
     "Belçika": "Belgium",
@@ -8374,5 +8374,398 @@ export function getPlayersForCpuTeam(teamName) {
   
   const countryEn = trToEn[countryNameTR] || countryNameTR;
   
-  return playersDatabase.filter(p => p.country === countryEn && p.year === year);
+  const base = playersDatabase.filter(p => p.country === countryEn && p.year === year);
+  const extra = extraCpuPlayers.filter(p => p.country === countryEn && p.year === year);
+  return [...base, ...extra];
 }
+
+const surnamesByCountry = {
+  "Brazil": ["Silva", "Santos", "Souza", "Oliveira", "Pereira", "Lima", "Carvalho", "Ferreira", "Gabryel", "Costa"],
+  "France": ["Martin", "Bernard", "Dubois", "Thomas", "Robert", "Richard", "Petit", "Moreau", "Laurent", "Simon"],
+  "Germany": ["Müller", "Schmidt", "Schneider", "Fischer", "Weber", "Meyer", "Wagner", "Becker", "Schulz", "Hoffmann"],
+  "Turkey": ["Yılmaz", "Kaya", "Demir", "Çelik", "Şahin", "Yıldız", "Yıldırım", "Öztürk", "Aydın", "Özdemir"],
+  "Türkiye": ["Yılmaz", "Kaya", "Demir", "Çelik", "Şahin", "Yıldız", "Yıldırım", "Öztürk", "Aydın", "Özdemir"],
+  "Argentina": ["Garcia", "Rodriguez", "Martinez", "Lopez", "Gonzalez", "Gomez", "Diaz", "Vasquez", "Alvarez", "Romero"],
+  "Spain": ["Garcia", "Rodriguez", "Martinez", "Lopez", "Sanchez", "Fernandez", "Gomez", "Perez", "Gonzalez", "Hernandez"],
+  "Italy": ["Rossi", "Russo", "Ferrari", "Esposito", "Bianchi", "Romano", "Colombo", "Ricci", "Marino", "Greco"],
+  "Netherlands": ["de Jong", "van Dijk", "Jansen", "de Vries", "Bakker", "van de Berg", "Smit", "Meijer", "Visser"],
+  "Uruguay": ["Rodriguez", "Gonzalez", "Fernandez", "Lopez", "Martinez", "Suarez", "Cavani", "Perez", "Silva", "Caceres"],
+  "England": ["Smith", "Jones", "Taylor", "Brown", "Wilson", "Johnson", "Davies", "Robinson", "Wright", "Thompson"],
+  "Portugal": ["Silva", "Santos", "Ferreira", "Pereira", "Oliveira", "Costa", "Rodrigues", "Martins", "Gomes", "Pinto"],
+  "Croatia": ["Horvat", "Kovačević", "Babić", "Marić", "Novak", "Knežević", "Vuković", "Marković", "Matić", "Petrović"],
+  "Hungary": ["Nagy", "Kovács", "Szabó", "Tóth", "Farkas", "Horváth", "Varga", "Kiss", "Molnár", "Németh"],
+  "Belgium": ["Peeters", "Janssens", "Maes", "Jacobs", "Mertens", "Willems", "Claes", "Goossens", "Luyten", "Pauwels"],
+  "Morocco": ["El Idrissi", "Alaoui", "Benjelloun", "Hariri", "Amrani", "Saidi", "Tazi", "El Amrani", "Rachidi"],
+  "Japan": ["Sato", "Suzuki", "Takahashi", "Tanaka", "Watanabe", "Ito", "Yamamoto", "Nakamura", "Kobayashi", "Saito"],
+  "Sweden": ["Andersson", "Johansson", "Karlsson", "Nilsson", "Eriksson", "Larsson", "Olsson", "Persson", "Svensson", "Gustafsson"],
+  "Bulgaria": ["Ivanov", "Georgiev", "Dimitrov", "Petrov", "Stoyanov", "Todorov", "Vasilev", "Iliev", "Angelov", "Marinov"],
+  "Senegal": ["Ndiaye", "Diop", "Fall", "Diallo", "Sarr", "Gueye", "Sane", "Mbow", "Sy", "Faye"],
+  "South Korea": ["Kim", "Lee", "Park", "Choi", "Jung", "Kang", "Cho", "Yoon", "Jang", "Lim"],
+  "Soviet Union": ["Ivanov", "Smirnov", "Kuznetsov", "Popov", "Vasiliev", "Petrov", "Sokolov", "Mikhailov", "Fedorov", "Morozov"]
+};
+
+const firstNamesByCountry = {
+  "Brazil": ["Ronaldo", "Adriano", "Gabriel", "Lucas", "Matheus", "Thiago", "Arthur", "Rodrigo", "Felipe", "Bruno"],
+  "France": ["Lucas", "Hugo", "Antoine", "Julien", "Nicolas", "Thomas", "Pierre", "Mathieu", "Jean", "Clément"],
+  "Germany": ["Lukas", "Leon", "Jonas", "Finn", "Maximilian", "Felix", "Tim", "Paul", "Sebastian", "Alexander"],
+  "Turkey": ["Mustafa", "Ahmet", "Mehmet", "Ali", "Can", "Hakan", "Emre", "Burak", "Kaan", "Cem"],
+  "Türkiye": ["Mustafa", "Ahmet", "Mehmet", "Ali", "Can", "Hakan", "Emre", "Burak", "Kaan", "Cem"],
+  "Argentina": ["Lionel", "Lautaro", "Mateo", "Joaquin", "Nicolas", "Bautista", "Julian", "Tomas", "Franco", "Matias"],
+  "Spain": ["Hugo", "Daniel", "Pablo", "Alejandro", "Alvaro", "Adrian", "David", "Mario", "Diego", "Javier"],
+  "Italy": ["Francesco", "Alessandro", "Lorenzo", "Mattia", "Andrea", "Gabriele", "Riccardo", "Tommaso", "Giuseppe", "Marco"],
+  "Netherlands": ["Luuk", "Daan", "Bram", "Sem", "Milan", "Levi", "Thijs", "Sven", "Lars", "Stijn"],
+  "Uruguay": ["Diego", "Santiago", "Mateo", "Nicolas", "Sebastian", "Lucas", "Emiliano", "Facundo", "Matías", "Joaquín"],
+  "England": ["Oliver", "Harry", "George", "Jack", "Jacob", "Noah", "Charlie", "Thomas", "James", "William"],
+  "Portugal": ["João", "Rodrigo", "Martim", "Francisco", "Afonso", "Tomas", "Miguel", "Duarte", "Tiago", "Gabriel"],
+  "Croatia": ["Luka", "Ivan", "David", "Jakov", "Filip", "Petar", "Mateo", "Karlo", "Lovro", "Borna"],
+  "Hungary": ["Bence", "Máté", "Dominik", "Levente", "Balázs", "Dániel", "Milán", "Péter", "Tamás", "Zoltán"],
+  "Belgium": ["Lucas", "Louis", "Nathan", "Arthur", "Victor", "Noah", "Liam", "Jules", "Thomas", "Maxime"],
+  "Morocco": ["Mohamed", "Youssef", "Hamza", "Amine", "Anass", "Karim", "Saad", "Zakaria", "Mehdi", "Bilal"],
+  "Japan": ["Haruto", "Yuto", "Sota", "Riku", "Haru", "Yuito", "Kaito", "Taiga", "Ren", "Itsuki"],
+  "Sweden": ["Lucas", "Liam", "William", "Elias", "Hugo", "Oliver", "Oscar", "Alexander", "Leo", "Filip"],
+  "Bulgaria": ["Georgi", "Dimitar", "Ivan", "Nikolay", "Hristo", "Petar", "Todor", "Vasil", "Martin", "Stefan"],
+  "Senegal": ["Sadio", "Cheikh", "Moussa", "Abdou", "Ibrahima", "Moustapha", "Ousmane", "Pape", "Babacar", "Amadou"],
+  "South Korea": ["Min-jun", "Seo-jun", "Ye-jun", "Ju-won", "Do-yun", "Si-woo", "Ji-ho", "Ha-joon", "Ji-hun", "Woo-jin"],
+  "Soviet Union": ["Alexander", "Sergey", "Dmitry", "Alexey", "Vladimir", "Andrey", "Mikhail", "Nikolay", "Yury", "Ivan"]
+};
+
+export function generateFictionalPlayer(country, year, position, averageRating, uniqueIdx) {
+  const sList = surnamesByCountry[country] || ["Smith"];
+  const fList = firstNamesByCountry[country] || ["John"];
+  const surname = sList[Math.floor(Math.random() * sList.length)];
+  const firstName = fList[Math.floor(Math.random() * fList.length)];
+  
+  const rating = Math.round(averageRating - 3 + Math.random() * 6);
+  
+  let pac, sho, pas, dri, def, phy;
+  if (position === "GK") {
+    pac = Math.round(rating * 0.7);
+    sho = Math.round(rating * 0.3);
+    pas = Math.round(rating * 0.65);
+    dri = Math.round(rating * 0.7);
+    def = rating;
+    phy = Math.round(rating * 0.75);
+  } else if (["CB", "LCB", "RCB", "LB", "RB", "LWB", "RWB"].includes(position)) {
+    pac = Math.round(rating * 0.85);
+    sho = Math.round(rating * 0.5);
+    pas = Math.round(rating * 0.7);
+    dri = Math.round(rating * 0.7);
+    def = Math.round(rating * 1.05);
+    phy = Math.round(rating * 1.02);
+  } else if (["CDM", "CM", "LCM", "RCM", "LM", "RM", "CAM", "LAM", "RAM"].includes(position)) {
+    pac = Math.round(rating * 0.88);
+    sho = Math.round(rating * 0.78);
+    pas = Math.round(rating * 1.05);
+    dri = Math.round(rating * 1.02);
+    def = Math.round(rating * 0.8);
+    phy = Math.round(rating * 0.85);
+  } else {
+    pac = Math.round(rating * 1.08);
+    sho = Math.round(rating * 1.02);
+    pas = Math.round(rating * 0.78);
+    dri = Math.round(rating * 1.02);
+    def = Math.round(rating * 0.35);
+    phy = Math.round(rating * 0.88);
+  }
+
+  const clamp = (v) => Math.max(30, Math.min(99, v));
+  const countryCode = countryCodeMap[country] || "🏳️";
+  
+  let emoji = "👨🏼";
+  if (["Brazil", "Morocco", "Senegal"].includes(country)) emoji = "👨🏽";
+  else if (["Japan", "South Korea"].includes(country)) emoji = "👨🏻‍💼";
+  
+  return {
+    id: `fictional_${country.toLowerCase().replace(/\s+/g, '_')}_${year}_${uniqueIdx}`,
+    name: `${firstName.charAt(0)}. ${surname}`,
+    position: position,
+    rating: rating,
+    country: country,
+    countryCode: countryCode,
+    flag: "",
+    year: year,
+    era: year < 2000 ? "retro" : "modern",
+    emoji: emoji,
+    stamina: 100,
+    matchRating: 6.0,
+    stats: {
+      pac: clamp(pac),
+      sho: clamp(sho),
+      pas: clamp(pas),
+      dri: clamp(dri),
+      def: clamp(def),
+      phy: clamp(phy)
+    }
+  };
+}
+
+export const extraCpuPlayers = [
+  // Brezilya 2002
+  { id: "belletti_02", name: "Belletti", position: "RB", rating: 78, country: "Brazil", year: 2002, era: "modern", emoji: "👨🏽", stats: { pac: 79, sho: 55, pas: 70, dri: 72, def: 75, phy: 76 } },
+  { id: "junior_02", name: "Júnior", position: "LB", rating: 77, country: "Brazil", year: 2002, era: "modern", emoji: "👨🏽", stats: { pac: 76, sho: 60, pas: 72, dri: 74, def: 72, phy: 73 } },
+  { id: "edmilson_02", name: "Edmílson", position: "CB", rating: 80, country: "Brazil", year: 2002, era: "modern", emoji: "👨🏽", stats: { pac: 70, sho: 58, pas: 74, dri: 71, def: 81, phy: 79 } },
+  { id: "polga_02", name: "Anderson Polga", position: "CB", rating: 75, country: "Brazil", year: 2002, era: "modern", emoji: "👨🏽", stats: { pac: 68, sho: 45, pas: 65, dri: 66, def: 76, phy: 75 } },
+  { id: "vampeta_02", name: "Vampeta", position: "CM", rating: 76, country: "Brazil", year: 2002, era: "modern", emoji: "👨🏽", stats: { pac: 72, sho: 68, pas: 75, dri: 73, def: 72, phy: 74 } },
+  { id: "ricardinho_02", name: "Ricardinho", position: "CM", rating: 78, country: "Brazil", year: 2002, era: "modern", emoji: "👨🏽", stats: { pac: 70, sho: 70, pas: 80, dri: 77, def: 68, phy: 71 } },
+  { id: "luizao_02", name: "Luizão", position: "ST", rating: 76, country: "Brazil", year: 2002, era: "modern", emoji: "👨🏽", stats: { pac: 72, sho: 76, pas: 62, dri: 69, def: 35, phy: 78 } },
+  // Fransa 1998
+  { id: "lama_98", name: "Bernard Lama", position: "GK", rating: 80, country: "France", year: 1998, era: "retro", emoji: "👨🏽", stats: { pac: 75, sho: 25, pas: 72, dri: 74, def: 82, phy: 78 } },
+  { id: "candela_98", name: "Vincent Candela", position: "LB", rating: 79, country: "France", year: 1998, era: "retro", emoji: "👨🏼", stats: { pac: 76, sho: 62, pas: 75, dri: 76, def: 78, phy: 74 } },
+  { id: "boghossian_98", name: "Alain Boghossian", position: "CM", rating: 78, country: "France", year: 1998, era: "retro", emoji: "👨🏼", stats: { pac: 72, sho: 68, pas: 77, dri: 73, def: 75, phy: 77 } },
+  { id: "pires_98", name: "Robert Pirès", position: "LM", rating: 80, country: "France", year: 1998, era: "retro", emoji: "👨🏼", stats: { pac: 80, sho: 74, pas: 82, dri: 82, def: 45, phy: 68 } },
+  { id: "guivarch_98", name: "Stéphane Guivarc'h", position: "ST", rating: 77, country: "France", year: 1998, era: "retro", emoji: "👨🏼", stats: { pac: 75, sho: 78, pas: 64, dri: 70, def: 38, phy: 76 } },
+  { id: "diomede_98", name: "Bernard Diomède", position: "LW", rating: 75, country: "France", year: 1998, era: "retro", emoji: "👨🏽", stats: { pac: 82, sho: 68, pas: 70, dri: 75, def: 35, phy: 70 } },
+  // Arjantin 1986
+  { id: "islas_86", name: "Luis Islas", position: "GK", rating: 76, country: "Argentina", year: 1986, era: "retro", emoji: "👨🏼", stats: { pac: 72, sho: 20, pas: 65, dri: 70, def: 77, phy: 71 } },
+  { id: "clausen_86", name: "Néstor Clausen", position: "RB", rating: 77, country: "Argentina", year: 1986, era: "retro", emoji: "👨🏼", stats: { pac: 75, sho: 50, pas: 68, dri: 70, def: 76, phy: 75 } },
+  { id: "brown_86", name: "José Luis Brown", position: "CB", rating: 81, country: "Argentina", year: 1986, era: "retro", emoji: "👨🏼", stats: { pac: 66, sho: 55, pas: 67, dri: 65, def: 83, phy: 82 } },
+  { id: "garre_86", name: "Óscar Garré", position: "LB", rating: 76, country: "Argentina", year: 1986, era: "retro", emoji: "👨🏼", stats: { pac: 73, sho: 48, pas: 66, dri: 68, def: 75, phy: 74 } },
+  { id: "borghi_86", name: "Claudio Borghi", position: "CAM", rating: 79, country: "Argentina", year: 1986, era: "retro", emoji: "👨🏼", stats: { pac: 74, sho: 72, pas: 81, dri: 83, def: 45, phy: 68 } },
+  { id: "pasculli_86", name: "Pedro Pasculli", position: "ST", rating: 77, country: "Argentina", year: 1986, era: "retro", emoji: "👨🏼", stats: { pac: 73, sho: 77, pas: 60, dri: 71, def: 32, phy: 75 } },
+  { id: "almiron_86", name: "Sergio Almirón", position: "ST", rating: 75, country: "Argentina", year: 1986, era: "retro", emoji: "👨🏼", stats: { pac: 75, sho: 74, pas: 62, dri: 72, def: 35, phy: 72 } },
+  { id: "zelada_86", name: "Héctor Zelada", position: "GK", rating: 75, country: "Argentina", year: 1986, era: "retro", emoji: "👨🏼", stats: { pac: 70, sho: 20, pas: 62, dri: 68, def: 75, phy: 72 } },
+  // İspanya 2010
+  { id: "valdes_10", name: "Víctor Valdés", position: "GK", rating: 83, country: "Spain", year: 2010, era: "modern", emoji: "👨🏼", stats: { pac: 78, sho: 25, pas: 78, dri: 79, def: 84, phy: 77 } },
+  { id: "reina_10", name: "Pepe Reina", position: "GK", rating: 81, country: "Spain", year: 2010, era: "modern", emoji: "👨🏼", stats: { pac: 74, sho: 22, pas: 79, dri: 76, def: 82, phy: 79 } },
+  { id: "arbeloa_10", name: "Álvaro Arbeloa", position: "RB", rating: 79, country: "Spain", year: 2010, era: "modern", emoji: "👨🏼", stats: { pac: 77, sho: 48, pas: 72, dri: 72, def: 80, phy: 78 } },
+  { id: "albiol_10", name: "Raúl Albiol", position: "CB", rating: 80, country: "Spain", year: 2010, era: "modern", emoji: "👨🏼", stats: { pac: 68, sho: 45, pas: 68, dri: 66, def: 82, phy: 80 } },
+  { id: "javi_martinez_10", name: "Javi Martínez", position: "CDM", rating: 79, country: "Spain", year: 2010, era: "modern", emoji: "👨🏼", stats: { pac: 66, sho: 64, pas: 73, dri: 70, def: 81, phy: 82 } },
+  { id: "mata_10", name: "Juan Mata", position: "CAM", rating: 81, country: "Spain", year: 2010, era: "modern", emoji: "👨🏼", stats: { pac: 78, sho: 76, pas: 83, dri: 82, def: 35, phy: 62 } },
+  { id: "llorente_10", name: "Fernando Llorente", position: "ST", rating: 80, country: "Spain", year: 2010, era: "modern", emoji: "👨🏼", stats: { pac: 65, sho: 80, pas: 63, dri: 70, def: 32, phy: 84 } },
+  // Almanya 2014
+  { id: "weidenfeller_14", name: "Roman Weidenfeller", position: "GK", rating: 80, country: "Germany", year: 2014, era: "modern", emoji: "👨🏼", stats: { pac: 72, sho: 24, pas: 70, dri: 73, def: 81, phy: 78 } },
+  { id: "ginter_14", name: "Matthias Ginter", position: "CB", rating: 77, country: "Germany", year: 2014, era: "modern", emoji: "👨🏼", stats: { pac: 66, sho: 50, pas: 68, dri: 68, def: 78, phy: 76 } },
+  { id: "mustafi_14", name: "Shkodran Mustafi", position: "CB", rating: 78, country: "Germany", year: 2014, era: "modern", emoji: "👨🏼", stats: { pac: 72, sho: 48, pas: 66, dri: 67, def: 79, phy: 79 } },
+  { id: "durm_14", name: "Erik Durm", position: "LB", rating: 75, country: "Germany", year: 2014, era: "modern", emoji: "👨🏼", stats: { pac: 80, sho: 55, pas: 70, dri: 72, def: 73, phy: 72 } },
+  { id: "grosskreutz_14", name: "Kevin Großkreutz", position: "RB", rating: 76, country: "Germany", year: 2014, era: "modern", emoji: "👨🏼", stats: { pac: 78, sho: 66, pas: 72, dri: 71, def: 74, phy: 80 } },
+  { id: "kramer_14", name: "Christoph Kramer", position: "CM", rating: 76, country: "Germany", year: 2014, era: "modern", emoji: "👨🏼", stats: { pac: 70, sho: 62, pas: 73, dri: 72, def: 74, phy: 78 } },
+  { id: "draxler_14", name: "Julian Draxler", position: "LM", rating: 78, country: "Germany", year: 2014, era: "modern", emoji: "👨🏼", stats: { pac: 77, sho: 74, pas: 78, dri: 81, def: 38, phy: 68 } },
+  // İtalya 2006
+  { id: "peruzzi_06", name: "Angelo Peruzzi", position: "GK", rating: 80, country: "Italy", year: 2006, era: "modern", emoji: "👨🏼", stats: { pac: 74, sho: 20, pas: 68, dri: 74, def: 81, phy: 80 } },
+  { id: "amelia_06", name: "Marco Amelia", position: "GK", rating: 76, country: "Italy", year: 2006, era: "modern", emoji: "👨🏼", stats: { pac: 70, sho: 20, pas: 63, dri: 70, def: 77, phy: 75 } },
+  { id: "barzagli_06", name: "Andrea Barzagli", position: "CB", rating: 81, country: "Italy", year: 2006, era: "modern", emoji: "👨🏼", stats: { pac: 72, sho: 40, pas: 64, dri: 65, def: 83, phy: 81 } },
+  { id: "zaccardo_06", name: "Cristian Zaccardo", position: "RB", rating: 76, country: "Italy", year: 2006, era: "modern", emoji: "👨🏼", stats: { pac: 75, sho: 52, pas: 68, dri: 70, def: 76, phy: 74 } },
+  { id: "oddo_06", name: "Massimo Oddo", position: "RB", rating: 78, country: "Italy", year: 2006, era: "modern", emoji: "👨🏼", stats: { pac: 78, sho: 60, pas: 75, dri: 73, def: 76, phy: 75 } },
+  { id: "iaquinta_06", name: "Vincenzo Iaquinta", position: "ST", rating: 78, country: "Italy", year: 2006, era: "modern", emoji: "👨🏼", stats: { pac: 80, sho: 78, pas: 63, dri: 73, def: 38, phy: 81 } },
+  // Arjantin 2022
+  { id: "rulli_22", name: "Geronimo Rulli", position: "GK", rating: 80, country: "Argentina", year: 2022, era: "modern", emoji: "👨🏼", stats: { pac: 75, sho: 22, pas: 73, dri: 76, def: 81, phy: 77 } },
+  { id: "lisandro_22", name: "Lisandro Martínez", position: "CB", rating: 82, country: "Argentina", year: 2022, era: "modern", emoji: "👨🏼", stats: { pac: 74, sho: 50, pas: 75, dri: 76, def: 83, phy: 80 } },
+  { id: "pezzella_22", name: "Germán Pezzella", position: "CB", rating: 78, country: "Argentina", year: 2022, era: "modern", emoji: "👨🏼", stats: { pac: 65, sho: 48, pas: 64, dri: 65, def: 80, phy: 79 } },
+  { id: "montiel_22", name: "Gonzalo Montiel", position: "RB", rating: 79, country: "Argentina", year: 2022, era: "modern", emoji: "👨🏼", stats: { pac: 78, sho: 58, pas: 72, dri: 74, def: 77, phy: 77 } },
+  { id: "foyth_22", name: "Juan Foyth", position: "RB", rating: 77, country: "Argentina", year: 2022, era: "modern", emoji: "👨🏼", stats: { pac: 72, sho: 45, pas: 68, dri: 72, def: 78, phy: 76 } },
+  { id: "palacios_22", name: "Exequiel Palacios", position: "CM", rating: 79, country: "Argentina", year: 2022, era: "modern", emoji: "👨🏼", stats: { pac: 72, sho: 70, pas: 78, dri: 77, def: 74, phy: 75 } },
+  { id: "almada_22", name: "Thiago Almada", position: "CAM", rating: 78, country: "Argentina", year: 2022, era: "modern", emoji: "👨🏼", stats: { pac: 84, sho: 72, pas: 77, dri: 81, def: 40, phy: 60 } },
+  // Fransa 2018
+  { id: "mandanda_18", name: "Steve Mandanda", position: "GK", rating: 81, country: "France", year: 2018, era: "modern", emoji: "👨🏽", stats: { pac: 76, sho: 23, pas: 74, dri: 78, def: 82, phy: 78 } },
+  { id: "kimpembe_18", name: "Presnel Kimpembe", position: "CB", rating: 80, country: "France", year: 2018, era: "modern", emoji: "👨🏽", stats: { pac: 74, sho: 45, pas: 68, dri: 70, def: 80, phy: 82 } },
+  { id: "sidibe_18", name: "Djibril Sidibé", position: "RB", rating: 78, country: "France", year: 2018, era: "modern", emoji: "👨🏼", stats: { pac: 79, sho: 60, pas: 73, dri: 74, def: 76, phy: 78 } },
+  { id: "nzonzi_18", name: "Steven Nzonzi", position: "CDM", rating: 79, country: "France", year: 2018, era: "modern", emoji: "👨🏽", stats: { pac: 62, sho: 66, pas: 74, dri: 71, def: 79, phy: 82 } },
+  { id: "lemar_18", name: "Thomas Lemar", position: "LM", rating: 79, country: "France", year: 2018, era: "modern", emoji: "👨🏼", stats: { pac: 79, sho: 73, pas: 80, dri: 82, def: 48, phy: 66 } },
+  { id: "thauvin_18", name: "Florian Thauvin", position: "RW", rating: 80, country: "France", year: 2018, era: "modern", emoji: "👨🏼", stats: { pac: 82, sho: 78, pas: 77, dri: 82, def: 38, phy: 68 } },
+  { id: "rami_18", name: "Adil Rami", position: "CB", rating: 77, country: "France", year: 2018, era: "modern", emoji: "👨🏼", stats: { pac: 60, sho: 48, pas: 60, dri: 62, def: 78, phy: 81 } },
+  // Brezilya 1970
+  { id: "everaldo_70", name: "Everaldo", position: "LB", rating: 78, country: "Brazil", year: 1970, era: "retro", emoji: "👨🏼", stats: { pac: 78, sho: 54, pas: 70, dri: 72, def: 77, phy: 75 } },
+  { id: "piazza_70", name: "Wilson Piazza", position: "CDM", rating: 80, country: "Brazil", year: 1970, era: "retro", emoji: "👨🏼", stats: { pac: 70, sho: 60, pas: 74, dri: 72, def: 81, phy: 78 } },
+  { id: "miranda_70", name: "Roberto Miranda", position: "ST", rating: 77, country: "Brazil", year: 1970, era: "retro", emoji: "👨🏼", stats: { pac: 76, sho: 77, pas: 64, dri: 73, def: 35, phy: 76 } },
+  { id: "baldochi_70", name: "Baldocchi", position: "CB", rating: 76, country: "Brazil", year: 1970, era: "retro", emoji: "👨🏼", stats: { pac: 65, sho: 40, pas: 60, dri: 62, def: 77, phy: 76 } },
+  { id: "fontana_70", name: "Fontana", position: "CB", rating: 75, country: "Brazil", year: 1970, era: "retro", emoji: "👨🏼", stats: { pac: 66, sho: 42, pas: 61, dri: 60, def: 76, phy: 75 } },
+  { id: "ze_maria_70", name: "Zé Maria", position: "RB", rating: 77, country: "Brazil", year: 1970, era: "retro", emoji: "👨🏼", stats: { pac: 78, sho: 52, pas: 68, dri: 71, def: 75, phy: 76 } },
+  { id: "camargo_70", name: "Joel Camargo", position: "CB", rating: 75, country: "Brazil", year: 1970, era: "retro", emoji: "👨🏼", stats: { pac: 68, sho: 44, pas: 62, dri: 62, def: 75, phy: 74 } },
+  { id: "ado_70", name: "Ado", position: "GK", rating: 75, country: "Brazil", year: 1970, era: "retro", emoji: "👨🏼", stats: { pac: 70, sho: 20, pas: 60, dri: 67, def: 76, phy: 72 } },
+  // Hollanda 1974
+  { id: "schrijvers_74", name: "Piet Schrijvers", position: "GK", rating: 76, country: "Netherlands", year: 1974, era: "retro", emoji: "👨🏼", stats: { pac: 70, sho: 20, pas: 62, dri: 68, def: 77, phy: 76 } },
+  { id: "israel_74", name: "Rinus Israël", position: "CB", rating: 78, country: "Netherlands", year: 1974, era: "retro", emoji: "👨🏼", stats: { pac: 66, sho: 52, pas: 68, dri: 66, def: 80, phy: 80 } },
+  { id: "rene_kerkhof_74", name: "René van de Kerkhof", position: "RW", rating: 79, country: "Netherlands", year: 1974, era: "retro", emoji: "👨🏼", stats: { pac: 82, sho: 74, pas: 75, dri: 79, def: 42, phy: 72 } },
+  { id: "willy_kerkhof_74", name: "Willy van de Kerkhof", position: "CM", rating: 80, country: "Netherlands", year: 1974, era: "retro", emoji: "👨🏼", stats: { pac: 76, sho: 72, pas: 80, dri: 77, def: 72, phy: 78 } },
+  { id: "geels_74", name: "Ruud Geels", position: "ST", rating: 78, country: "Netherlands", year: 1974, era: "retro", emoji: "👨🏼", stats: { pac: 74, sho: 81, pas: 62, dri: 71, def: 35, phy: 77 } },
+  { id: "nierssel_74", name: "Kees van Ierssel", position: "RB", rating: 75, country: "Netherlands", year: 1974, era: "retro", emoji: "👨🏼", stats: { pac: 74, sho: 48, pas: 65, dri: 67, def: 74, phy: 73 } },
+  { id: "strik_74", name: "Pleun Strik", position: "CB", rating: 74, country: "Netherlands", year: 1974, era: "retro", emoji: "👨🏼", stats: { pac: 64, sho: 40, pas: 61, dri: 62, def: 75, phy: 74 } },
+  { id: "treijtel_74", name: "Eddy Treijtel", position: "GK", rating: 74, country: "Netherlands", year: 1974, era: "retro", emoji: "👨🏼", stats: { pac: 68, sho: 20, pas: 58, dri: 65, def: 74, phy: 71 } },
+  // Uruguay 1950
+  { id: "paz_50", name: "Aníbal Paz", position: "GK", rating: 76, country: "Uruguay", year: 1950, era: "retro", emoji: "👨🏼", stats: { pac: 70, sho: 20, pas: 60, dri: 66, def: 78, phy: 72 } },
+  { id: "martinez_50", name: "William Martínez", position: "CB", rating: 77, country: "Uruguay", year: 1950, era: "retro", emoji: "👨🏼", stats: { pac: 66, sho: 45, pas: 60, dri: 62, def: 79, phy: 77 } },
+  { id: "ortuno_50", name: "Washington Ortuño", position: "CM", rating: 74, country: "Uruguay", year: 1950, era: "retro", emoji: "👨🏼", stats: { pac: 68, sho: 60, pas: 71, dri: 68, def: 62, phy: 68 } },
+  { id: "pini_50", name: "Rodolfo Pini", position: "CB", rating: 74, country: "Uruguay", year: 1950, era: "retro", emoji: "👨🏼", stats: { pac: 64, sho: 42, pas: 58, dri: 60, def: 75, phy: 73 } },
+  { id: "jcgonzalez_50", name: "Juan Carlos González", position: "RB", rating: 76, country: "Uruguay", year: 1950, era: "retro", emoji: "👨🏼", stats: { pac: 72, sho: 48, pas: 64, dri: 66, def: 75, phy: 74 } },
+  { id: "rijo_50", name: "Luis Rijo", position: "ST", rating: 73, country: "Uruguay", year: 1950, era: "retro", emoji: "👨🏼", stats: { pac: 72, sho: 73, pas: 56, dri: 67, def: 30, phy: 70 } },
+  { id: "romero_50", name: "Carlos Romero", position: "ST", rating: 75, country: "Uruguay", year: 1950, era: "retro", emoji: "👨🏼", stats: { pac: 73, sho: 75, pas: 60, dri: 70, def: 32, phy: 72 } },
+  { id: "vidal_50", name: "Ernesto Vidal", position: "LW", rating: 78, country: "Uruguay", year: 1950, era: "retro", emoji: "👨🏼", stats: { pac: 80, sho: 75, pas: 70, dri: 77, def: 38, phy: 71 } },
+  // İngiltere 1966
+  { id: "greaves_66", name: "Jimmy Greaves", position: "ST", rating: 84, country: "England", year: 1966, era: "retro", emoji: "👨🏼", stats: { pac: 82, sho: 86, pas: 72, dri: 85, def: 30, phy: 70 } },
+  { id: "bonetti_66", name: "Peter Bonetti", position: "GK", rating: 78, country: "England", year: 1966, era: "retro", emoji: "👨🏼", stats: { pac: 75, sho: 20, pas: 63, dri: 70, def: 80, phy: 72 } },
+  { id: "hunter_66", name: "Norman Hunter", position: "CB", rating: 79, country: "England", year: 1966, era: "retro", emoji: "👨🏼", stats: { pac: 68, sho: 50, pas: 65, dri: 66, def: 81, phy: 82 } },
+  { id: "armfield_66", name: "Jimmy Armfield", position: "RB", rating: 78, country: "England", year: 1966, era: "retro", emoji: "👨🏼", stats: { pac: 76, sho: 48, pas: 70, dri: 71, def: 78, phy: 74 } },
+  { id: "byrne_66", name: "Gerry Byrne", position: "LB", rating: 75, country: "England", year: 1966, era: "retro", emoji: "👨🏼", stats: { pac: 74, sho: 45, pas: 66, dri: 67, def: 74, phy: 75 } },
+  { id: "flowers_66", name: "Ron Flowers", position: "CM", rating: 77, country: "England", year: 1966, era: "retro", emoji: "👨🏼", stats: { pac: 70, sho: 70, pas: 76, dri: 72, def: 73, phy: 77 } },
+  { id: "callaghan_66", name: "Ian Callaghan", position: "RW", rating: 76, country: "England", year: 1966, era: "retro", emoji: "👨🏼", stats: { pac: 79, sho: 68, pas: 72, dri: 75, def: 45, phy: 72 } },
+  { id: "springett_66", name: "Ron Springett", position: "GK", rating: 77, country: "England", year: 1966, era: "retro", emoji: "👨🏼", stats: { pac: 72, sho: 20, pas: 61, dri: 68, def: 78, phy: 73 } },
+  // Portekiz 2006
+  { id: "nuno_gomes_06", name: "Nuno Gomes", position: "ST", rating: 80, country: "Portugal", year: 2006, era: "modern", emoji: "👨🏼", stats: { pac: 77, sho: 81, pas: 68, dri: 76, def: 35, phy: 74 } },
+  { id: "tiago_06", name: "Tiago Mendes", position: "CM", rating: 80, country: "Portugal", year: 2006, era: "modern", emoji: "👨🏼", stats: { pac: 73, sho: 72, pas: 80, dri: 76, def: 75, phy: 78 } },
+  { id: "viana_06", name: "Hugo Viana", position: "CM", rating: 77, country: "Portugal", year: 2006, era: "modern", emoji: "👨🏼", stats: { pac: 72, sho: 70, pas: 79, dri: 75, def: 64, phy: 70 } },
+  { id: "boamorte_06", name: "Luís Boa Morte", position: "LW", rating: 77, country: "Portugal", year: 2006, era: "modern", emoji: "👨🏼", stats: { pac: 82, sho: 72, pas: 70, dri: 77, def: 40, phy: 76 } },
+  { id: "ricardo_costa_06", name: "Ricardo Costa", position: "CB", rating: 76, country: "Portugal", year: 2006, era: "modern", emoji: "👨🏼", stats: { pac: 68, sho: 44, pas: 60, dri: 62, def: 77, phy: 78 } },
+  { id: "caneira_06", name: "Marco Caneira", position: "LB", rating: 76, country: "Portugal", year: 2006, era: "modern", emoji: "👨🏼", stats: { pac: 74, sho: 46, pas: 68, dri: 68, def: 75, phy: 75 } },
+  { id: "paulo_santos_06", name: "Paulo Santos", position: "GK", rating: 75, country: "Portugal", year: 2006, era: "modern", emoji: "👨🏼", stats: { pac: 72, sho: 20, pas: 62, dri: 68, def: 76, phy: 74 } },
+  // Türkiye 2002
+  { id: "omer_catkic_02", name: "Ömer Çatkıç", position: "GK", rating: 77, country: "Türkiye", year: 2002, era: "modern", emoji: "👨🏼", stats: { pac: 72, sho: 20, pas: 65, dri: 68, def: 78, phy: 75 } },
+  { id: "emre_asik_02", name: "Emre Aşık", position: "CB", rating: 76, country: "Türkiye", year: 2002, era: "modern", emoji: "👨🏼", stats: { pac: 66, sho: 42, pas: 58, dri: 60, def: 77, phy: 80 } },
+  { id: "ahmet_yildirim_02", name: "Ahmet Yıldırım", position: "CB", rating: 75, country: "Türkiye", year: 2002, era: "modern", emoji: "👨🏼", stats: { pac: 68, sho: 45, pas: 68, dri: 65, def: 75, phy: 74 } },
+  { id: "umit_ozat_02", name: "Ümit Özat", position: "LB", rating: 76, country: "Türkiye", year: 2002, era: "modern", emoji: "👨🏼", stats: { pac: 72, sho: 58, pas: 74, dri: 70, def: 74, phy: 76 } },
+  { id: "tayfur_havutcu_02", name: "Tayfur Havutçu", position: "CDM", rating: 75, country: "Türkiye", year: 2002, era: "modern", emoji: "👨🏼", stats: { pac: 68, sho: 60, pas: 72, dri: 68, def: 76, phy: 78 } },
+  { id: "mustafa_izzet_02", name: "Muzzy İzzet", position: "CM", rating: 77, country: "Türkiye", year: 2002, era: "modern", emoji: "👨🏼", stats: { pac: 74, sho: 70, pas: 78, dri: 76, def: 70, phy: 73 } },
+  { id: "okan_buruk_02", name: "Okan Buruk", position: "RM", rating: 77, country: "Türkiye", year: 2002, era: "modern", emoji: "👨🏼", stats: { pac: 80, sho: 68, pas: 74, dri: 76, def: 68, phy: 75 } },
+  { id: "abdullah_ercan_02", name: "Abdullah Ercan", position: "LB", rating: 74, country: "Türkiye", year: 2002, era: "modern", emoji: "👨🏼", stats: { pac: 72, sho: 50, pas: 70, dri: 68, def: 72, phy: 73 } },
+  { id: "arif_erdem_02", name: "Arif Erdem", position: "ST", rating: 76, country: "Türkiye", year: 2002, era: "modern", emoji: "👨🏼", stats: { pac: 78, sho: 75, pas: 72, dri: 75, def: 35, phy: 70 } },
+  { id: "zafer_02", name: "Zafer Özgültekin", position: "GK", rating: 73, country: "Türkiye", year: 2002, era: "modern", emoji: "👨🏼", stats: { pac: 68, sho: 20, pas: 58, dri: 64, def: 74, phy: 72 } },
+  // Hırvatistan 2018
+  { id: "livakovic_18", name: "Dominik Livaković", position: "GK", rating: 77, country: "Croatia", year: 2018, era: "modern", emoji: "👨🏼", stats: { pac: 74, sho: 20, pas: 62, dri: 72, def: 78, phy: 74 } },
+  { id: "caletacar_18", name: "Duje Ćaleta-Car", position: "CB", rating: 76, country: "Croatia", year: 2018, era: "modern", emoji: "👨🏼", stats: { pac: 62, sho: 40, pas: 62, dri: 60, def: 77, phy: 78 } },
+  { id: "jedvaj_18", name: "Tin Jedvaj", position: "RB", rating: 75, country: "Croatia", year: 2018, era: "modern", emoji: "👨🏼", stats: { pac: 74, sho: 48, pas: 65, dri: 68, def: 74, phy: 74 } },
+  { id: "badelj_18", name: "Milan Badelj", position: "CDM", rating: 77, country: "Croatia", year: 2018, era: "modern", emoji: "👨🏼", stats: { pac: 65, sho: 66, pas: 74, dri: 72, def: 76, phy: 76 } },
+  { id: "pjaca_18", name: "Marko Pjaca", position: "LW", rating: 75, country: "Croatia", year: 2018, era: "modern", emoji: "👨🏼", stats: { pac: 80, sho: 70, pas: 68, dri: 78, def: 35, phy: 68 } },
+  { id: "nikola_kalinic_18", name: "Nikola Kalinić", position: "ST", rating: 77, country: "Croatia", year: 2018, era: "modern", emoji: "👨🏼", stats: { pac: 72, sho: 76, pas: 62, dri: 72, def: 32, phy: 74 } },
+  { id: "kalinic_l_18", name: "Lovre Kalinić", position: "GK", rating: 76, country: "Croatia", year: 2018, era: "modern", emoji: "👨🏼", stats: { pac: 70, sho: 20, pas: 60, dri: 68, def: 76, phy: 76 } },
+  // Macaristan 1954
+  { id: "budai_54", name: "László Budai", position: "RW", rating: 79, country: "Hungary", year: 1954, era: "retro", emoji: "👨🏼", stats: { pac: 80, sho: 74, pas: 76, dri: 78, def: 40, phy: 70 } },
+  { id: "palotas_54", name: "Péter Palotás", position: "ST", rating: 80, country: "Hungary", year: 1954, era: "retro", emoji: "👨🏼", stats: { pac: 74, sho: 82, pas: 70, dri: 75, def: 32, phy: 76 } },
+  { id: "toth_54", name: "Mihály Tóth", position: "LW", rating: 76, country: "Hungary", year: 1954, era: "retro", emoji: "👨🏼", stats: { pac: 78, sho: 72, pas: 71, dri: 75, def: 38, phy: 68 } },
+  { id: "szojka_54", name: "Ferenc Szojka", position: "CM", rating: 75, country: "Hungary", year: 1954, era: "retro", emoji: "👨🏼", stats: { pac: 70, sho: 65, pas: 74, dri: 70, def: 70, phy: 74 } },
+  { id: "kovacs_i_54", name: "Imre Kovács", position: "CDM", rating: 76, country: "Hungary", year: 1954, era: "retro", emoji: "👨🏼", stats: { pac: 68, sho: 58, pas: 70, dri: 67, def: 76, phy: 77 } },
+  { id: "csordas_54", name: "Lajos Csordás", position: "ST", rating: 75, country: "Hungary", year: 1954, era: "retro", emoji: "👨🏼", stats: { pac: 75, sho: 75, pas: 63, dri: 71, def: 30, phy: 71 } },
+  { id: "karpati_54", name: "Béla Kárpáti", position: "CB", rating: 75, country: "Hungary", year: 1954, era: "retro", emoji: "👨🏼", stats: { pac: 66, sho: 40, pas: 60, dri: 62, def: 76, phy: 76 } },
+  { id: "geller_54", name: "Sándor Gellér", position: "GK", rating: 74, country: "Hungary", year: 1954, era: "retro", emoji: "👨🏼", stats: { pac: 70, sho: 20, pas: 60, dri: 66, def: 75, phy: 72 } },
+  // Brezilya 1958
+  { id: "zito_58", name: "Zito", position: "CM", rating: 82, country: "Brazil", year: 1958, era: "retro", emoji: "👨🏽", stats: { pac: 72, sho: 72, pas: 82, dri: 78, def: 78, phy: 80 } },
+  { id: "dino_sani_58", name: "Dino Sani", position: "CM", rating: 80, country: "Brazil", year: 1958, era: "retro", emoji: "👨🏽", stats: { pac: 70, sho: 74, pas: 80, dri: 76, def: 74, phy: 76 } },
+  { id: "desordi_58", name: "De Sordi", position: "RB", rating: 78, country: "Brazil", year: 1958, era: "retro", emoji: "👨🏽", stats: { pac: 76, sho: 50, pas: 68, dri: 70, def: 78, phy: 75 } },
+  { id: "mauro_58", name: "Mauro Ramos", position: "CB", rating: 79, country: "Brazil", year: 1958, era: "retro", emoji: "👨🏽", stats: { pac: 68, sho: 45, pas: 65, dri: 66, def: 80, phy: 78 } },
+  { id: "joel_58", name: "Joel Antônio", position: "RW", rating: 77, country: "Brazil", year: 1958, era: "retro", emoji: "👨🏽", stats: { pac: 80, sho: 70, pas: 72, dri: 76, def: 38, phy: 70 } },
+  { id: "castilho_58", name: "Carlos Castilho", position: "GK", rating: 77, country: "Brazil", year: 1958, era: "retro", emoji: "👨🏽", stats: { pac: 72, sho: 20, pas: 61, dri: 68, def: 78, phy: 74 } },
+  { id: "moacir_58", name: "Moacir", position: "CAM", rating: 76, country: "Brazil", year: 1958, era: "retro", emoji: "👨🏽", stats: { pac: 74, sho: 70, pas: 75, dri: 75, def: 44, phy: 70 } },
+  { id: "oreco_58", name: "Oreco", position: "LB", rating: 75, country: "Brazil", year: 1958, era: "retro", emoji: "👨🏽", stats: { pac: 75, sho: 46, pas: 66, dri: 68, def: 74, phy: 72 } },
+  // Brezilya 1962
+  { id: "gilmar_62", name: "Gilmar", position: "GK", rating: 85, country: "Brazil", year: 1962, era: "retro", emoji: "👨🏽", stats: { pac: 79, sho: 20, pas: 68, dri: 75, def: 88, phy: 78 } },
+  { id: "pepe_62", name: "Pepe", position: "LW", rating: 80, country: "Brazil", year: 1962, era: "retro", emoji: "👨🏽", stats: { pac: 80, sho: 82, pas: 75, dri: 78, def: 35, phy: 74 } },
+  { id: "coutinho_62", name: "Coutinho", position: "ST", rating: 81, country: "Brazil", year: 1962, era: "retro", emoji: "👨🏽", stats: { pac: 77, sho: 83, pas: 68, dri: 79, def: 30, phy: 76 } },
+  { id: "altair_62", name: "Altair", position: "LB", rating: 76, country: "Brazil", year: 1962, era: "retro", emoji: "👨🏽", stats: { pac: 75, sho: 44, pas: 65, dri: 67, def: 76, phy: 74 } },
+  { id: "zequinha_62", name: "Zequinha", position: "CM", rating: 76, country: "Brazil", year: 1962, era: "retro", emoji: "👨🏽", stats: { pac: 70, sho: 64, pas: 75, dri: 72, def: 71, phy: 74 } },
+  { id: "jair_marinho_62", name: "Jair Marinho", position: "RB", rating: 75, country: "Brazil", year: 1962, era: "retro", emoji: "👨🏽", stats: { pac: 74, sho: 45, pas: 64, dri: 67, def: 74, phy: 73 } },
+  { id: "mengalvio_62", name: "Mengálvio", position: "CM", rating: 75, country: "Brazil", year: 1962, era: "retro", emoji: "👨🏽", stats: { pac: 72, sho: 66, pas: 74, dri: 71, def: 65, phy: 72 } },
+  // İtalya 1982
+  { id: "baresi_f_82", name: "Franco Baresi", position: "CB", rating: 82, country: "Italy", year: 1982, era: "retro", emoji: "👨🏼", stats: { pac: 72, sho: 52, pas: 72, dri: 70, def: 85, phy: 80 } },
+  { id: "vierchowod_82", name: "Pietro Vierchowod", position: "CB", rating: 80, country: "Italy", year: 1982, era: "retro", emoji: "👨🏼", stats: { pac: 78, sho: 42, pas: 60, dri: 62, def: 82, phy: 84 } },
+  { id: "antognoni_82", name: "Giancarlo Antognoni", position: "CAM", rating: 82, country: "Italy", year: 1982, era: "retro", emoji: "👨🏼", stats: { pac: 76, sho: 78, pas: 84, dri: 81, def: 48, phy: 70 } },
+  { id: "baresi_g_82", name: "Giuseppe Baresi", position: "CB", rating: 79, country: "Italy", year: 1982, era: "retro", emoji: "👨🏼", stats: { pac: 70, sho: 48, pas: 68, dri: 65, def: 80, phy: 80 } },
+  { id: "bordon_82", name: "Ivano Bordon", position: "GK", rating: 76, country: "Italy", year: 1982, era: "retro", emoji: "👨🏼", stats: { pac: 72, sho: 20, pas: 60, dri: 67, def: 77, phy: 74 } },
+  { id: "massaro_82", name: "Daniele Massaro", position: "ST", rating: 76, country: "Italy", year: 1982, era: "retro", emoji: "👨🏼", stats: { pac: 76, sho: 75, pas: 64, dri: 72, def: 38, phy: 75 } },
+  { id: "selvaggi_82", name: "Franco Selvaggi", position: "ST", rating: 75, country: "Italy", year: 1982, era: "retro", emoji: "👨🏼", stats: { pac: 75, sho: 74, pas: 60, dri: 71, def: 32, phy: 70 } },
+  { id: "galli_82", name: "Giovanni Galli", position: "GK", rating: 75, country: "Italy", year: 1982, era: "retro", emoji: "👨🏼", stats: { pac: 70, sho: 20, pas: 58, dri: 65, def: 75, phy: 73 } },
+  // Almanya 1990
+  { id: "illgner_90", name: "Bodo Illgner", position: "GK", rating: 82, country: "Germany", year: 1990, era: "retro", emoji: "👨🏼", stats: { pac: 76, sho: 20, pas: 68, dri: 74, def: 83, phy: 79 } },
+  { id: "moller_90", name: "Andreas Möller", position: "CAM", rating: 81, country: "Germany", year: 1990, era: "retro", emoji: "👨🏼", stats: { pac: 80, sho: 76, pas: 81, dri: 82, def: 42, phy: 68 } },
+  { id: "riedle_90", name: "Karl-Heinz Riedle", position: "ST", rating: 81, country: "Germany", year: 1990, era: "retro", emoji: "👨🏼", stats: { pac: 78, sho: 82, pas: 64, dri: 73, def: 35, phy: 82 } },
+  { id: "reuter_90", name: "Stefan Reuter", position: "RB", rating: 80, country: "Germany", year: 1990, era: "retro", emoji: "👨🏼", stats: { pac: 84, sho: 58, pas: 72, dri: 72, def: 78, phy: 78 } },
+  { id: "kopke_90", name: "Andreas Köpke", position: "GK", rating: 79, country: "Germany", year: 1990, era: "retro", emoji: "👨🏼", stats: { pac: 74, sho: 20, pas: 64, dri: 70, def: 80, phy: 76 } },
+  { id: "thon_90", name: "Olaf Thon", position: "CM", rating: 79, country: "Germany", year: 1990, era: "retro", emoji: "👨🏼", stats: { pac: 72, sho: 72, pas: 80, dri: 77, def: 74, phy: 74 } },
+  { id: "mill_90", name: "Frank Mill", position: "ST", rating: 75, country: "Germany", year: 1990, era: "retro", emoji: "👨🏼", stats: { pac: 75, sho: 74, pas: 60, dri: 70, def: 32, phy: 73 } },
+  { id: "hermann_90", name: "Günter Hermann", position: "CM", rating: 73, country: "Germany", year: 1990, era: "retro", emoji: "👨🏼", stats: { pac: 68, sho: 60, pas: 70, dri: 68, def: 70, phy: 72 } },
+  // Brezilya 1994
+  { id: "cafu_94", name: "Cafu", position: "RB", rating: 83, country: "Brazil", year: 1994, era: "retro", emoji: "👨🏽", stats: { pac: 84, sho: 60, pas: 78, dri: 79, def: 80, phy: 82 } },
+  { id: "ronaldo_94", name: "Ronaldo", position: "ST", rating: 82, country: "Brazil", year: 1994, era: "retro", emoji: "👨🏽", stats: { pac: 86, sho: 82, pas: 68, dri: 83, def: 30, phy: 74 } },
+  { id: "muller_94", name: "Müller", position: "ST", rating: 79, country: "Brazil", year: 1994, era: "retro", emoji: "👨🏽", stats: { pac: 78, sho: 79, pas: 70, dri: 77, def: 34, phy: 75 } },
+  { id: "zetti_94", name: "Zetti", position: "GK", rating: 78, country: "Brazil", year: 1994, era: "retro", emoji: "👨🏽", stats: { pac: 73, sho: 20, pas: 62, dri: 68, def: 79, phy: 76 } },
+  { id: "ronaldao_94", name: "Ronaldão", position: "CB", rating: 76, country: "Brazil", year: 1994, era: "retro", emoji: "👨🏽", stats: { pac: 62, sho: 40, pas: 58, dri: 60, def: 77, phy: 82 } },
+  { id: "viola_94", name: "Viola", position: "ST", rating: 76, country: "Brazil", year: 1994, era: "retro", emoji: "👨🏽", stats: { pac: 75, sho: 76, pas: 60, dri: 71, def: 32, phy: 76 } },
+  { id: "paulo_sergio_94", name: "Paulo Sérgio", position: "RW", rating: 76, country: "Brazil", year: 1994, era: "retro", emoji: "👨🏽", stats: { pac: 80, sho: 73, pas: 70, dri: 75, def: 38, phy: 72 } },
+  { id: "gilmar_r_94", name: "Gilmar Rinaldi", position: "GK", rating: 75, country: "Brazil", year: 1994, era: "retro", emoji: "👨🏽", stats: { pac: 70, sho: 20, pas: 60, dri: 65, def: 75, phy: 74 } },
+  // Belçika 2018
+  { id: "casteels_18", name: "Koen Casteels", position: "GK", rating: 79, country: "Belgium", year: 2018, era: "modern", emoji: "👨🏼", stats: { pac: 74, sho: 20, pas: 71, dri: 74, def: 80, phy: 77 } },
+  { id: "tielemans_18", name: "Youri Tielemans", position: "CM", rating: 79, country: "Belgium", year: 2018, era: "modern", emoji: "👨🏼", stats: { pac: 68, sho: 78, pas: 80, dri: 77, def: 70, phy: 73 } },
+  { id: "mignolet_18", name: "Simon Mignolet", position: "GK", rating: 78, country: "Belgium", year: 2018, era: "modern", emoji: "👨🏼", stats: { pac: 72, sho: 20, pas: 68, dri: 71, def: 78, phy: 76 } },
+  { id: "thorgan_hazard_18", name: "Thorgan Hazard", position: "LM", rating: 78, country: "Belgium", year: 2018, era: "modern", emoji: "👨🏼", stats: { pac: 79, sho: 74, pas: 77, dri: 80, def: 48, phy: 66 } },
+  { id: "batshuayi_18", name: "Michy Batshuayi", position: "ST", rating: 78, country: "Belgium", year: 2018, era: "modern", emoji: "👨🏽", stats: { pac: 78, sho: 79, pas: 60, dri: 74, def: 30, phy: 76 } },
+  { id: "januzaj_18", name: "Adnan Januzaj", position: "RW", rating: 77, country: "Belgium", year: 2018, era: "modern", emoji: "👨🏼", stats: { pac: 78, sho: 72, pas: 74, dri: 81, def: 35, phy: 60 } },
+  { id: "dendoncker_18", name: "Leander Dendoncker", position: "CB", rating: 76, country: "Belgium", year: 2018, era: "modern", emoji: "👨🏼", stats: { pac: 68, sho: 62, pas: 70, dri: 68, def: 76, phy: 81 } },
+  { id: "boyata_18", name: "Dedryck Boyata", position: "CB", rating: 75, country: "Belgium", year: 2018, era: "modern", emoji: "👨🏽", stats: { pac: 65, sho: 40, pas: 58, dri: 60, def: 75, phy: 79 } },
+  // Fas 2022
+  { id: "munir_22", name: "Munir Mohamedi", position: "GK", rating: 76, country: "Morocco", year: 2022, era: "modern", emoji: "👨🏽", stats: { pac: 72, sho: 20, pas: 63, dri: 71, def: 76, phy: 74 } },
+  { id: "attiyat_allah_22", name: "Yahia Attiyat Allah", position: "LB", rating: 75, country: "Morocco", year: 2022, era: "modern", emoji: "👨🏽", stats: { pac: 77, sho: 50, pas: 70, dri: 71, def: 74, phy: 73 } },
+  { id: "elyamiq_22", name: "Jawad El Yamiq", position: "CB", rating: 75, country: "Morocco", year: 2022, era: "modern", emoji: "👨🏽", stats: { pac: 70, sho: 40, pas: 60, dri: 62, def: 75, phy: 77 } },
+  { id: "benoun_22", name: "Badr Benoun", position: "CB", rating: 74, country: "Morocco", year: 2022, era: "modern", emoji: "👨🏽", stats: { pac: 64, sho: 38, pas: 58, dri: 60, def: 75, phy: 75 } },
+  { id: "hamdallah_22", name: "Abderrazak Hamdallah", position: "ST", rating: 74, country: "Morocco", year: 2022, era: "modern", emoji: "👨🏽", stats: { pac: 68, sho: 75, pas: 58, dri: 70, def: 30, phy: 76 } },
+  { id: "elkhannouss_22", name: "Bilal El Khannouss", position: "CAM", rating: 73, country: "Morocco", year: 2022, era: "modern", emoji: "👨🏽", stats: { pac: 72, sho: 62, pas: 74, dri: 75, def: 52, phy: 60 } },
+  { id: "zaroury_22", name: "Anass Zaroury", position: "LW", rating: 73, country: "Morocco", year: 2022, era: "modern", emoji: "👨🏽", stats: { pac: 78, sho: 66, pas: 68, dri: 75, def: 35, phy: 58 } },
+  { id: "tagnaouti_22", name: "Ahmed Reda Tagnaouti", position: "GK", rating: 72, country: "Morocco", year: 2022, era: "modern", emoji: "👨🏽", stats: { pac: 68, sho: 20, pas: 58, dri: 65, def: 72, phy: 71 } },
+  // Japonya 2022
+  { id: "mitoma_22", name: "Kaoru Mitoma", position: "LW", rating: 80, country: "Japan", year: 2022, era: "modern", emoji: "👨🏻‍💼", stats: { pac: 84, sho: 72, pas: 75, dri: 83, def: 48, phy: 65 } },
+  { id: "itakura_22", name: "Ko Itakura", position: "CB", rating: 77, country: "Japan", year: 2022, era: "modern", emoji: "👨🏻‍💼", stats: { pac: 70, sho: 48, pas: 68, dri: 67, def: 78, phy: 78 } },
+  { id: "tanaka_ao_22", name: "Ao Tanaka", position: "CM", rating: 75, country: "Japan", year: 2022, era: "modern", emoji: "👨🏻‍💼", stats: { pac: 70, sho: 68, pas: 76, dri: 73, def: 70, phy: 72 } },
+  { id: "asano_22", name: "Takuma Asano", position: "ST", rating: 75, country: "Japan", year: 2022, era: "modern", emoji: "👨🏻‍💼", stats: { pac: 84, sho: 73, pas: 62, dri: 73, def: 34, phy: 70 } },
+  { id: "taniguchi_22", name: "Shogo Taniguchi", position: "CB", rating: 74, country: "Japan", year: 2022, era: "modern", emoji: "👨🏻‍💼", stats: { pac: 65, sho: 40, pas: 62, dri: 63, def: 74, phy: 75 } },
+  { id: "ito_h_22", name: "Hiroki Ito", position: "LB", rating: 75, country: "Japan", year: 2022, era: "modern", emoji: "👨🏻‍💼", stats: { pac: 75, sho: 50, pas: 70, dri: 68, def: 74, phy: 76 } },
+  { id: "schmidt_22", name: "Daniel Schmidt", position: "GK", rating: 74, country: "Japan", year: 2022, era: "modern", emoji: "👨🏻‍💼", stats: { pac: 70, sho: 20, pas: 65, dri: 68, def: 75, phy: 74 } },
+  { id: "tani_22", name: "Kosei Tani", position: "GK", rating: 70, country: "Japan", year: 2022, era: "modern", emoji: "👨🏻‍💼", stats: { pac: 66, sho: 20, pas: 58, dri: 62, def: 70, phy: 70 } },
+  // Hırvatistan 1998
+  { id: "tudor_98", name: "Igor Tudor", position: "CB", rating: 77, country: "Croatia", year: 1998, era: "retro", emoji: "👨🏼", stats: { pac: 68, sho: 52, pas: 66, dri: 65, def: 78, phy: 82 } },
+  { id: "asanovic_98", name: "Aljoša Asanović", position: "CM", rating: 78, country: "Croatia", year: 1998, era: "retro", emoji: "👨🏼", stats: { pac: 70, sho: 72, pas: 81, dri: 77, def: 70, phy: 75 } },
+  { id: "vlaovic_98", name: "Goran Vlaović", position: "ST", rating: 76, country: "Croatia", year: 1998, era: "retro", emoji: "👨🏼", stats: { pac: 78, sho: 76, pas: 62, dri: 72, def: 35, phy: 71 } },
+  { id: "seric_98", name: "Anthony Šerić", position: "LB", rating: 73, country: "Croatia", year: 1998, era: "retro", emoji: "👨🏼", stats: { pac: 74, sho: 48, pas: 66, dri: 67, def: 72, phy: 72 } },
+  { id: "mamic_z_98", name: "Zoran Mamić", position: "CDM", rating: 72, country: "Croatia", year: 1998, era: "retro", emoji: "👨🏼", stats: { pac: 65, sho: 54, pas: 68, dri: 65, def: 72, phy: 73 } },
+  { id: "jurcic_98", name: "Krunoslav Jurčić", position: "CM", rating: 72, country: "Croatia", year: 1998, era: "retro", emoji: "👨🏼", stats: { pac: 66, sho: 60, pas: 70, dri: 66, def: 71, phy: 74 } },
+  { id: "mrmic_98", name: "Marjan Mrmić", position: "GK", rating: 72, country: "Croatia", year: 1998, era: "retro", emoji: "👨🏼", stats: { pac: 68, sho: 20, pas: 58, dri: 63, def: 73, phy: 72 } },
+  { id: "vasilj_98", name: "Vladimir Vasilj", position: "GK", rating: 70, country: "Croatia", year: 1998, era: "retro", emoji: "👨🏼", stats: { pac: 65, sho: 20, pas: 55, dri: 60, def: 70, phy: 70 } },
+  // Almanya 1974
+  { id: "heynckes_74", name: "Jupp Heynckes", position: "ST", rating: 83, country: "Germany", year: 1974, era: "retro", emoji: "👨🏼", stats: { pac: 80, sho: 84, pas: 70, dri: 78, def: 32, phy: 77 } },
+  { id: "netzer_74", name: "Günter Netzer", position: "CAM", rating: 82, country: "Germany", year: 1974, era: "retro", emoji: "👨🏼", stats: { pac: 75, sho: 78, pas: 86, dri: 82, def: 42, phy: 71 } },
+  { id: "flohe_74", name: "Heinz Flohe", position: "CM", rating: 77, country: "Germany", year: 1974, era: "retro", emoji: "👨🏼", stats: { pac: 72, sho: 70, pas: 78, dri: 76, def: 70, phy: 73 } },
+  { id: "kleff_74", name: "Wolfgang Kleff", position: "GK", rating: 76, country: "Germany", year: 1974, era: "retro", emoji: "👨🏼", stats: { pac: 72, sho: 20, pas: 61, dri: 67, def: 77, phy: 74 } },
+  { id: "kapellmann_74", name: "Jupp Kapellmann", position: "CM", rating: 76, country: "Germany", year: 1974, era: "retro", emoji: "👨🏼", stats: { pac: 74, sho: 68, pas: 75, dri: 72, def: 72, phy: 75 } },
+  { id: "kremers_74", name: "Helmut Kremers", position: "LB", rating: 76, country: "Germany", year: 1974, era: "retro", emoji: "👨🏼", stats: { pac: 76, sho: 54, pas: 70, dri: 71, def: 75, phy: 74 } },
+  { id: "herzog_74", name: "Dieter Herzog", position: "LW", rating: 76, country: "Germany", year: 1974, era: "retro", emoji: "👨🏼", stats: { pac: 80, sho: 72, pas: 71, dri: 76, def: 35, phy: 68 } },
+  { id: "nigbur_74", name: "Norbert Nigbur", position: "GK", rating: 75, country: "Germany", year: 1974, era: "retro", emoji: "👨🏼", stats: { pac: 70, sho: 20, pas: 58, dri: 65, def: 76, phy: 72 } },
+  // Hollanda 1998
+  { id: "zenden_98", name: "Boudewijn Zenden", position: "LM", rating: 80, country: "Netherlands", year: 1998, era: "retro", emoji: "👨🏼", stats: { pac: 82, sho: 74, pas: 77, dri: 81, def: 52, phy: 72 } },
+  { id: "rdeboer_98", name: "Ronald de Boer", position: "RM", rating: 81, country: "Netherlands", year: 1998, era: "retro", emoji: "👨🏼", stats: { pac: 75, sho: 77, pas: 80, dri: 80, def: 68, phy: 76 } },
+  { id: "hasselbaink_98", name: "Jimmy Floyd Hasselbaink", position: "ST", rating: 81, country: "Netherlands", year: 1998, era: "retro", emoji: "👨🏽", stats: { pac: 80, sho: 83, pas: 65, dri: 76, def: 35, phy: 82 } },
+  { id: "vanhooijdonk_98", name: "Pierre van Hooijdonk", position: "ST", rating: 80, country: "Netherlands", year: 1998, era: "retro", emoji: "👨🏼", stats: { pac: 70, sho: 82, pas: 68, dri: 72, def: 32, phy: 83 } },
+  { id: "reiziger_98", name: "Michael Reiziger", position: "RB", rating: 78, country: "Netherlands", year: 1998, era: "retro", emoji: "👨🏽", stats: { pac: 81, sho: 48, pas: 70, dri: 71, def: 77, phy: 76 } },
+  { id: "bogarde_98", name: "Winston Bogarde", position: "LB", rating: 77, country: "Netherlands", year: 1998, era: "retro", emoji: "👨🏽", stats: { pac: 75, sho: 50, pas: 66, dri: 68, def: 78, phy: 82 } },
+  { id: "hesp_98", name: "Ruud Hesp", position: "GK", rating: 78, country: "Netherlands", year: 1998, era: "retro", emoji: "👨🏼", stats: { pac: 74, sho: 20, pas: 62, dri: 70, def: 79, phy: 75 } },
+  // İsveç 1994
+  { id: "kandersson_94", name: "Kennet Andersson", position: "ST", rating: 79, country: "Sweden", year: 1994, era: "retro", emoji: "👨🏼", stats: { pac: 72, sho: 79, pas: 63, dri: 70, def: 35, phy: 84 } },
+  { id: "blomqvist_94", name: "Jesper Blomqvist", position: "LM", rating: 76, country: "Sweden", year: 1994, era: "retro", emoji: "👨🏼", stats: { pac: 80, sho: 68, pas: 72, dri: 78, def: 42, phy: 66 } },
+  { id: "mild_94", name: "Håkan Mild", position: "CM", rating: 76, country: "Sweden", year: 1994, era: "retro", emoji: "👨🏼", stats: { pac: 72, sho: 65, pas: 73, dri: 70, def: 74, phy: 80 } },
+  { id: "nilsson_m_94", name: "Mikael Nilsson", position: "RB", rating: 75, country: "Sweden", year: 1994, era: "retro", emoji: "👨🏼", stats: { pac: 75, sho: 52, pas: 70, dri: 68, def: 74, phy: 75 } },
+  { id: "lucic_94", name: "Teddy Lučić", position: "CB", rating: 74, country: "Sweden", year: 1994, era: "retro", emoji: "👨🏼", stats: { pac: 66, sho: 40, pas: 60, dri: 62, def: 75, phy: 77 } },
+  { id: "kamark_94", name: "Pontus Kåmark", position: "RB", rating: 74, country: "Sweden", year: 1994, era: "retro", emoji: "👨🏼", stats: { pac: 74, sho: 44, pas: 62, dri: 65, def: 74, phy: 73 } },
+  { id: "eriksson_l_94", name: "Lars Eriksson", position: "GK", rating: 73, country: "Sweden", year: 1994, era: "retro", emoji: "👨🏼", stats: { pac: 68, sho: 20, pas: 58, dri: 64, def: 74, phy: 72 } },
+  { id: "hedman_94", name: "Magnus Hedman", position: "GK", rating: 72, country: "Sweden", year: 1994, era: "retro", emoji: "👨🏼", stats: { pac: 66, sho: 20, pas: 56, dri: 62, def: 72, phy: 71 } },
+  // Bulgaristan 1994
+  { id: "borimirov_94", name: "Daniel Borimirov", position: "CM", rating: 75, country: "Bulgaria", year: 1994, era: "retro", emoji: "👨🏼", stats: { pac: 70, sho: 71, pas: 74, dri: 72, def: 68, phy: 75 } },
+  { id: "genchev_94", name: "Boncho Genchev", position: "ST", rating: 74, country: "Bulgaria", year: 1994, era: "retro", emoji: "👨🏼", stats: { pac: 75, sho: 74, pas: 62, dri: 72, def: 32, phy: 72 } },
+  { id: "kremenliev_94", name: "Emil Kremenliev", position: "RB", rating: 74, country: "Bulgaria", year: 1994, era: "retro", emoji: "👨🏼", stats: { pac: 74, sho: 48, pas: 65, dri: 67, def: 73, phy: 73 } },
+  { id: "georgiev_g_94", name: "Georgi Georgiev", position: "CM", rating: 73, country: "Bulgaria", year: 1994, era: "retro", emoji: "👨🏼", stats: { pac: 68, sho: 64, pas: 73, dri: 71, def: 68, phy: 70 } },
+  { id: "iliev_n_94", name: "Nikolay Iliev", position: "CB", rating: 73, country: "Bulgaria", year: 1994, era: "retro", emoji: "👨🏼", stats: { pac: 62, sho: 42, pas: 58, dri: 60, def: 75, phy: 74 } },
+  { id: "andonov_94", name: "Ivaylo Andonov", position: "ST", rating: 72, country: "Bulgaria", year: 1994, era: "retro", emoji: "👨🏼", stats: { pac: 72, sho: 73, pas: 58, dri: 70, def: 30, phy: 70 } },
+  { id: "iotov_94", name: "Velko Iotov", position: "LW", rating: 73, country: "Bulgaria", year: 1994, era: "retro", emoji: "👨🏼", stats: { pac: 78, sho: 68, pas: 66, dri: 74, def: 32, phy: 68 } },
+  { id: "mihtarski_94", name: "Petar Mihtarski", position: "ST", rating: 72, country: "Bulgaria", year: 1994, era: "retro", emoji: "👨🏼", stats: { pac: 70, sho: 72, pas: 60, dri: 68, def: 30, phy: 70 } },
+  // Senegal 2002
+  { id: "beye_02", name: "Habib Beye", position: "RB", rating: 75, country: "Senegal", year: 2002, era: "modern", emoji: "👨🏽", stats: { pac: 76, sho: 48, pas: 66, dri: 68, def: 75, phy: 76 } },
+  { id: "camara_s_02", name: "Souleymane Camara", position: "ST", rating: 73, country: "Senegal", year: 2002, era: "modern", emoji: "👨🏽", stats: { pac: 78, sho: 72, pas: 58, dri: 71, def: 30, phy: 70 } },
+  { id: "ndour_02", name: "Alassane N'Dour", position: "RB", rating: 72, country: "Senegal", year: 2002, era: "modern", emoji: "👨🏽", stats: { pac: 74, sho: 45, pas: 62, dri: 66, def: 71, phy: 72 } },
+  { id: "mezague_02", name: "Amandy Mezague", position: "CM", rating: 72, country: "Senegal", year: 2002, era: "modern", emoji: "👨🏽", stats: { pac: 68, sho: 64, pas: 71, dri: 67, def: 68, phy: 73 } },
+  { id: "ndiaye_m_02", name: "Makhtar N'Diaye", position: "CM", rating: 72, country: "Senegal", year: 2002, era: "modern", emoji: "👨🏽", stats: { pac: 70, sho: 62, pas: 70, dri: 69, def: 65, phy: 70 } },
+  { id: "diallo_m_02", name: "Moustapha Diallo", position: "CM", rating: 71, country: "Senegal", year: 2002, era: "modern", emoji: "👨🏽", stats: { pac: 66, sho: 58, pas: 68, dri: 65, def: 68, phy: 72 } },
+  { id: "thiaw_02", name: "Pape Thiaw", position: "ST", rating: 73, country: "Senegal", year: 2002, era: "modern", emoji: "👨🏽", stats: { pac: 72, sho: 74, pas: 56, dri: 68, def: 30, phy: 74 } },
+  { id: "cissokho_02", name: "Kalidou Cissokho", position: "GK", rating: 70, country: "Senegal", year: 2002, era: "modern", emoji: "👨🏽", stats: { pac: 66, sho: 20, pas: 56, dri: 62, def: 72, phy: 70 } },
+  // G. Kore 2002
+  { id: "yoon_02", name: "Yoon Jung-hwan", position: "CAM", rating: 73, country: "South Korea", year: 2002, era: "modern", emoji: "👨🏻‍💼", stats: { pac: 68, sho: 65, pas: 76, dri: 72, def: 45, phy: 64 } },
+  { id: "changsuryong_02", name: "Choi Sung-yong", position: "LB", rating: 73, country: "South Korea", year: 2002, era: "modern", emoji: "👨🏻‍💼", stats: { pac: 74, sho: 48, pas: 66, dri: 68, def: 72, phy: 72 } },
+  { id: "leeminsung_02", name: "Lee Min-sung", position: "CB", rating: 73, country: "South Korea", year: 2002, era: "modern", emoji: "👨🏻‍💼", stats: { pac: 66, sho: 40, pas: 60, dri: 61, def: 74, phy: 75 } },
+  { id: "hyun_02", name: "Hyun Young-min", position: "LB", rating: 72, country: "South Korea", year: 2002, era: "modern", emoji: "👨🏻‍💼", stats: { pac: 72, sho: 46, pas: 65, dri: 67, def: 71, phy: 71 } },
+  { id: "choitaeuk_02", name: "Choi Tae-uk", position: "RW", rating: 73, country: "South Korea", year: 2002, era: "modern", emoji: "👨🏻‍💼", stats: { pac: 80, sho: 66, pas: 68, dri: 74, def: 35, phy: 65 } },
+  { id: "hwang_02", name: "Hwang Sun-hong", position: "ST", rating: 76, country: "South Korea", year: 2002, era: "modern", emoji: "👨🏻‍💼", stats: { pac: 73, sho: 78, pas: 62, dri: 71, def: 32, phy: 74 } },
+  { id: "chadurri_02", name: "Cha Du-ri", position: "RW", rating: 74, country: "South Korea", year: 2002, era: "modern", emoji: "👨🏻‍💼", stats: { pac: 85, sho: 68, pas: 64, dri: 71, def: 42, phy: 77 } },
+  { id: "choieunsung_02", name: "Choi Eun-sung", position: "GK", rating: 71, country: "South Korea", year: 2002, era: "modern", emoji: "👨🏻‍💼", stats: { pac: 68, sho: 20, pas: 55, dri: 60, def: 72, phy: 70 } }
+];

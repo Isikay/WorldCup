@@ -5,18 +5,35 @@ import { getCommentary, isChainedCommentary } from './commentary.js';
 
 export class MatchSimulator {
   constructor(homeTeam, awayTeam, stageName, isFinal = false, difficulty = 'normal', isKnockout = true) {
+    this.awayOriginal = awayTeam;
+
+    let homeForm = homeTeam.formation;
+    if (typeof homeForm === 'string') {
+      homeForm = formations[homeForm] || formations["4-4-2"];
+    } else if (!homeForm) {
+      homeForm = formations["4-4-2"];
+    }
+
     this.home = {
       name: homeTeam.name,
       emoji: homeTeam.emoji || "🦁",
       rating: homeTeam.rating,
       chemistry: homeTeam.chemistry,
       perk: homeTeam.perk,
-      starters: homeTeam.starters.map(p => p ? { ...p, stamina: p.stamina !== undefined ? p.stamina : 100, matchRating: 6.0 } : null),
-      bench: homeTeam.bench.map(p => p ? { ...p, stamina: p.stamina !== undefined ? p.stamina : 100, matchRating: 6.0 } : null),
-      formation: homeTeam.formation,
+      isUser: homeTeam.isUser,
+      starters: homeTeam.starters.map(p => p ? { ...p, stamina: p.stamina !== undefined ? p.stamina : 100, matchRating: 7.0 } : null),
+      bench: homeTeam.bench.map(p => p ? { ...p, stamina: p.stamina !== undefined ? p.stamina : 100, matchRating: 7.0 } : null),
+      formation: homeForm,
       score: 0,
       goals: []
     };
+
+    let cpuForm = awayTeam.formation;
+    if (typeof cpuForm === 'string') {
+      cpuForm = formations[cpuForm] || formations["4-4-2"];
+    } else if (!cpuForm) {
+      cpuForm = formations["4-4-2"];
+    }
 
     this.away = {
       name: awayTeam.name,
@@ -24,84 +41,76 @@ export class MatchSimulator {
       rating: awayTeam.rating,
       colorPrimary: awayTeam.colorPrimary || "#ffffff",
       colorSecondary: awayTeam.colorSecondary || "#000000",
+      formation: cpuForm,
       score: 0,
       goals: []
     };
-
-    // Load CPU players
-    const cpuPlayers = getPlayersForCpuTeam(this.away.name);
-    
-    // Sort players and assign them into slots based on CPU formation
-    const cpuFormKey = awayTeam.formation || "4-4-2";
-    const cpuForm = formations[cpuFormKey] || formations["4-4-2"];
-    this.away.formation = cpuForm;
     this.away.tactic = awayTeam.tactic || "balanced";
-    
-    // Map CPU players to slots
-    this.away.starters = new Array(11).fill(null);
-    this.away.bench = [];
-    
-    if (cpuPlayers.length > 0) {
-      const unassigned = [...cpuPlayers].sort((a, b) => b.rating - a.rating);
-      
-      // First, place Goalkeeper (GK)
-      const gkIdx = cpuForm.slots.findIndex(s => s.pos === "GK");
-      if (gkIdx !== -1) {
-        const gkPlayer = unassigned.find(p => p.position === "GK");
-        if (gkPlayer) {
-          this.away.starters[gkIdx] = { ...gkPlayer, stamina: 100, matchRating: 6.0 };
-          unassigned.splice(unassigned.indexOf(gkPlayer), 1);
-        }
-      }
-      
-      // Then, for each slot, find a matching position player
-      cpuForm.slots.forEach((slot, idx) => {
-        if (this.away.starters[idx] !== null) return;
-        const matching = unassigned.find(p => isPositionCompatible(slot.pos, p.position));
-        if (matching) {
-          this.away.starters[idx] = { ...matching, stamina: 100, matchRating: 6.0 };
-          unassigned.splice(unassigned.indexOf(matching), 1);
-        }
-      });
-      
-      // Fill remaining slots with best available players
-      cpuForm.slots.forEach((slot, idx) => {
-        if (this.away.starters[idx] !== null) return;
-        if (unassigned.length > 0) {
-          const p = unassigned.shift();
-          this.away.starters[idx] = { ...p, stamina: 100, matchRating: 6.0 };
-        }
-      });
-      
-      // Fill bench with remaining players (up to 5)
-      for (let i = 0; i < 5 && unassigned.length > 0; i++) {
-        const p = unassigned.shift();
-        this.away.bench.push({ ...p, stamina: 100, matchRating: 6.0 });
-      }
+
+    if (awayTeam.starters && awayTeam.bench) {
+      this.away.starters = awayTeam.starters.map(p => p ? { ...p, stamina: p.stamina !== undefined ? p.stamina : 100, matchRating: 7.0 } : null);
+      this.away.bench = awayTeam.bench.map(p => p ? { ...p, stamina: p.stamina !== undefined ? p.stamina : 100, matchRating: 7.0 } : null);
     } else {
-      // Fallback
-      const positions = cpuForm.slots.map(s => s.pos);
-      positions.forEach((pos, idx) => {
-        this.away.starters[idx] = {
-          id: `cpu_${idx}`,
-          name: `${awayTeam.name} ${pos}`,
-          position: pos,
-          rating: awayTeam.rating,
-          stats: { pac: awayTeam.rating, sho: awayTeam.rating, pas: awayTeam.rating, dri: awayTeam.rating, def: awayTeam.rating, phy: awayTeam.rating },
-          stamina: 100,
-          matchRating: 6.0
-        };
-      });
-      for (let i = 0; i < 5; i++) {
-        this.away.bench.push({
-          id: `cpu_sub_${i}`,
-          name: `${awayTeam.name} Yedek ${i+1}`,
-          position: "SUB",
-          rating: awayTeam.rating - 5,
-          stats: { pac: awayTeam.rating - 5, sho: awayTeam.rating - 5, pas: awayTeam.rating - 5, dri: awayTeam.rating - 5, def: awayTeam.rating - 5, phy: awayTeam.rating - 5 },
-          stamina: 100,
-          matchRating: 6.0
+      const cpuPlayers = getPlayersForCpuTeam(this.away.name);
+      this.away.starters = new Array(11).fill(null);
+      this.away.bench = [];
+      
+      if (cpuPlayers.length > 0) {
+        const unassigned = [...cpuPlayers].sort((a, b) => b.rating - a.rating);
+        const gkIdx = cpuForm.slots.findIndex(s => s.pos === "GK");
+        if (gkIdx !== -1) {
+          const gkPlayer = unassigned.find(p => p.position === "GK");
+          if (gkPlayer) {
+            this.away.starters[gkIdx] = { ...gkPlayer, stamina: 100, matchRating: 7.0 };
+            unassigned.splice(unassigned.indexOf(gkPlayer), 1);
+          }
+        }
+        
+        cpuForm.slots.forEach((slot, idx) => {
+          if (this.away.starters[idx] !== null) return;
+          const matching = unassigned.find(p => isPositionCompatible(slot.pos, p.position));
+          if (matching) {
+            this.away.starters[idx] = { ...matching, stamina: 100, matchRating: 7.0 };
+            unassigned.splice(unassigned.indexOf(matching), 1);
+          }
         });
+        
+        cpuForm.slots.forEach((slot, idx) => {
+          if (this.away.starters[idx] !== null) return;
+          if (unassigned.length > 0) {
+            const p = unassigned.shift();
+            this.away.starters[idx] = { ...p, stamina: 100, matchRating: 7.0 };
+          }
+        });
+        
+        for (let i = 0; i < 8 && unassigned.length > 0; i++) {
+          const p = unassigned.shift();
+          this.away.bench.push({ ...p, stamina: 100, matchRating: 7.0 });
+        }
+      } else {
+        const positions = cpuForm.slots.map(s => s.pos);
+        positions.forEach((pos, idx) => {
+          this.away.starters[idx] = {
+            id: `cpu_${idx}`,
+            name: `${awayTeam.name} ${pos}`,
+            position: pos,
+            rating: awayTeam.rating,
+            stats: { pac: awayTeam.rating, sho: awayTeam.rating, pas: awayTeam.rating, dri: awayTeam.rating, def: awayTeam.rating, phy: awayTeam.rating },
+            stamina: 100,
+            matchRating: 7.0
+          };
+        });
+        for (let i = 0; i < 8; i++) {
+          this.away.bench.push({
+            id: `cpu_sub_${i}`,
+            name: `${awayTeam.name} Yedek ${i+1}`,
+            position: "SUB",
+            rating: awayTeam.rating - 5,
+            stats: { pac: awayTeam.rating - 5, sho: awayTeam.rating - 5, pas: awayTeam.rating - 5, dri: awayTeam.rating - 5, def: awayTeam.rating - 5, phy: awayTeam.rating - 5 },
+            stamina: 100,
+            matchRating: 7.0
+          });
+        }
       }
     }
 
@@ -118,13 +127,23 @@ export class MatchSimulator {
     this.crowdVolume = 0.2;
     this.isOver = false;
     this.substitutionsUsed = 0;
-    this.maxSubs = 5;
+    this.maxSubs = 8;
+
+    this.homeSubsUsed = 0;
+    this.awaySubsUsed = 0;
+    this.awaySubbedOutPlayerIds = new Set();
+    this.pendingCpuSubEvent = null;
+    this.isAutoSubEnabled = false;
+    this.pendingUserAutoSubEvent = null;
 
     // Track subbed-out player IDs/names to restrict re-entry
     this.subbedOutPlayerIds = new Set();
 
     // Tactical mode: 'attacking', 'balanced', 'defensive'
     this.tacticalMode = 'balanced';
+
+    this.buildupPhase = 0;
+    this.possessionSide = Math.random() < 0.5 ? 'home' : 'away';
 
     // Pending chained commentary (multi-line events)
     this.pendingChain = null;
@@ -235,9 +254,126 @@ export class MatchSimulator {
     };
   }
 
+  makeCpuSubstitutions(teamKey) {
+    const team = this[teamKey];
+    if (!team || !team.starters || !team.bench || !team.formation) return;
+    
+    const subLimit = this.maxSubs;
+    const usedKey = teamKey === 'home' ? 'homeSubsUsed' : 'awaySubsUsed';
+    if (this[usedKey] === undefined) this[usedKey] = 0;
+    if (this[usedKey] >= subLimit) return;
+
+    team.starters.forEach((starter, sIdx) => {
+      if (!starter || this[usedKey] >= subLimit) return;
+
+      if (starter.stamina < 60) {
+        const slot = team.formation.slots[sIdx];
+        let bestSubIdx = -1;
+        let bestSubRating = -1;
+
+        team.bench.forEach((sub, bIdx) => {
+          if (!sub || sub.stamina < 80) return;
+          
+          const subbedOutSet = teamKey === 'home' ? this.subbedOutPlayerIds : this.awaySubbedOutPlayerIds;
+          if (subbedOutSet && subbedOutSet.has(sub.id || sub.name)) return;
+
+          const compatible = sub.position === slot.pos || isPositionCompatible(slot.pos, sub.position);
+          if (compatible && sub.rating > bestSubRating) {
+            bestSubIdx = bIdx;
+            bestSubRating = sub.rating;
+          }
+        });
+
+        if (bestSubIdx !== -1) {
+          const sub = team.bench[bestSubIdx];
+          team.starters[sIdx] = sub;
+          team.bench[bestSubIdx] = starter;
+          
+          const subbedOutSet = teamKey === 'home' ? this.subbedOutPlayerIds : this.awaySubbedOutPlayerIds;
+          if (subbedOutSet) subbedOutSet.add(starter.id || starter.name);
+
+          this[usedKey]++;
+
+          this.pendingCpuSubEvent = {
+            type: 'sub',
+            minute: this.minute,
+            commentary: getCommentary('sub', {
+              player: sub.name,
+              keeper: starter.name,
+              team: team.name,
+              minute: this.minute
+            }),
+            team: teamKey
+          };
+        }
+      }
+    });
+  }
+
+  makeUserAutoSubstitutions() {
+    if (this.substitutionsUsed >= this.maxSubs) return;
+
+    for (let sIdx = 0; sIdx < this.home.starters.length; sIdx++) {
+      const starter = this.home.starters[sIdx];
+      if (!starter) continue;
+
+      if (starter.stamina < 50) {
+        const slot = this.home.formation.slots[sIdx];
+        let bestSubIdx = -1;
+        let bestSubRating = -1;
+
+        this.home.bench.forEach((sub, bIdx) => {
+          if (!sub || sub.stamina < 75) return;
+          
+          if (this.subbedOutPlayerIds.has(sub.id || sub.name)) return;
+
+          const compatible = sub.position === slot.pos || isPositionCompatible(slot.pos, sub.position);
+          if (compatible && sub.rating > bestSubRating) {
+            bestSubIdx = bIdx;
+            bestSubRating = sub.rating;
+          }
+        });
+
+        if (bestSubIdx !== -1) {
+          const sub = this.home.bench[bestSubIdx];
+          
+          this.home.starters[sIdx] = sub;
+          this.home.bench[bestSubIdx] = starter;
+
+          this.subbedOutPlayerIds.add(starter.id || starter.name);
+          this.substitutionsUsed++;
+
+          this._recalculateHomeWeight();
+          this._recalculateAwayWeight();
+
+          const prefix = i18n.currentLang === 'tr' ? '[OTO-DEĞİŞİKLİK]' : '[AUTO-SUB]';
+          const subComm = getCommentary('sub', {
+            player: sub.name,
+            keeper: starter.name,
+            team: this.home.name,
+            minute: this.minute
+          });
+
+          this.pendingUserAutoSubEvent = {
+            type: 'sub',
+            minute: this.minute,
+            commentary: `${prefix} ${subComm}`,
+            team: 'home'
+          };
+          break;
+        }
+      }
+    }
+  }
+
   _getEffectiveRating(player, slotPos) {
     if (!player) return 0;
-    let baseRating = player.rating;
+    let formMod = 0;
+    if (player.lastMatchRating !== undefined) {
+      if (player.lastMatchRating < 5.5) formMod = -1;
+      else if (player.lastMatchRating > 8.0) formMod = 1;
+    }
+    let baseRating = player.rating + formMod;
     if (player.injuryPenalty) {
       baseRating = Math.max(50, baseRating - player.injuryPenalty);
     }
@@ -330,6 +466,47 @@ export class MatchSimulator {
   // Simulates one game cycle (representing 1-3 minutes)
   tick() {
     if (this.isOver) return null;
+
+    // Check for CPU automatic substitutions
+    this.makeCpuSubstitutions('away');
+    if (!this.home.isUser) {
+      this.makeCpuSubstitutions('home');
+    }
+
+    // Check for User automatic substitutions if enabled
+    if (this.isAutoSubEnabled && this.home.isUser) {
+      this.makeUserAutoSubstitutions();
+    }
+
+    if (this.pendingCpuSubEvent) {
+      const subEvent = this.pendingCpuSubEvent;
+      this.pendingCpuSubEvent = null;
+      return {
+        minute: this.minute,
+        scoreHome: this.home.score,
+        scoreAway: this.away.score,
+        ballX: this.ballX,
+        momentumHome: this.momentumHome,
+        crowdVolume: this.crowdVolume,
+        isOver: false,
+        event: subEvent
+      };
+    }
+
+    if (this.pendingUserAutoSubEvent) {
+      const subEvent = this.pendingUserAutoSubEvent;
+      this.pendingUserAutoSubEvent = null;
+      return {
+        minute: this.minute,
+        scoreHome: this.home.score,
+        scoreAway: this.away.score,
+        ballX: this.ballX,
+        momentumHome: this.momentumHome,
+        crowdVolume: this.crowdVolume,
+        isOver: false,
+        event: subEvent
+      };
+    }
 
     let event = null;
 
@@ -548,36 +725,200 @@ export class MatchSimulator {
       };
     }
 
-    // Normal play logic
+    // Normal play phase logic
     const tacticalMods = this._getTacticalModifiers();
-    const totalWeight = this.homeWeight + this.awayWeight;
-    const homePossessionChance = (this.homeWeight / totalWeight) + (tacticalMods.possessionBonus / 100);
+    const isHomeAttacking = this.possessionSide === 'home';
 
-    const roll = Math.random();
-    const isHomeAttacking = roll < homePossessionChance;
-
-    // Track possession
+    // Track possession ticks
     if (isHomeAttacking) {
       this.matchStats.homePossessionTicks++;
     } else {
       this.matchStats.awayPossessionTicks++;
     }
 
-    // Update ball coordinate and momentum display
-    if (isHomeAttacking) {
-      this.ballX = Math.round(55 + Math.random() * 35);
-      this.momentumHome = Math.round(52 + Math.random() * 28);
-      this.crowdVolume = 0.2 + (this.ballX - 50) / 100;
-    } else {
-      this.ballX = Math.round(10 + Math.random() * 35);
-      this.momentumHome = Math.round(20 + Math.random() * 28);
-      this.crowdVolume = 0.2 + (50 - this.ballX) / 150;
-    }
+    const lang = i18n.currentLang || 'tr';
+    const attackingTeam = isHomeAttacking ? this.home : this.away;
+    const defendingTeam = isHomeAttacking ? this.away : this.home;
 
-    // Action occurrence probability: ~20% chance for events
-    const eventRoll = Math.random();
-    if (eventRoll < 0.20) {
+    const phaseCommentaries = {
+      tr: {
+        midfield_pass_success: [
+          "{team} orta sahada kısa paslarla hazırlık pasları yapıyor, oyun kuruyor.",
+          "{team} paslaşarak rakip yarı alana doğru yerleşiyor.",
+          "{team} orta sahada pas trafiğiyle boşluk aramaya başladı.",
+          "{team} ayağa paslarla topu ileriye taşıyor."
+        ],
+        midfield_pass_fail: [
+          "{opp_team} orta alanda topu kaptı ve hızlı hücum fırsatı yakaladı.",
+          "{team} orta sahada pas hatası yaptı, top {opp_team} kontrolünde.",
+          "{opp_team} presle topu kazanarak hücumu kesti.",
+          "{team} oyun kurmaya çalışırken araya giren {opp_team} topun sahibi oldu."
+        ],
+        attack_creation_success: [
+          "{team} ceza sahası yayına yakın bir noktada tehlikeli paslaşıyor, boşluk arıyor.",
+          "{player} şık bir çalımla çizgiye indi, içeri çevirmek istiyor!",
+          "{team} rakip savunmayı geriye koşturuyor, ceza alanında tehlike!",
+          "{player} topla buluştu, driplingle ceza sahasına sokuluyor!"
+        ],
+        attack_creation_fail: [
+          "{opp_team} defansı zamanında araya girerek tehlikeyi önledi.",
+          "{player} ceza sahasına girmek isterken topu kaybetti, savunma başarılı.",
+          "{opp_team} savunması presle hücum oyuncusunu pas hatasına zorladı.",
+          "{team} kanattan yüklenmek istedi ancak savunma topu taçla kesti."
+        ]
+      },
+      en: {
+        midfield_pass_success: [
+          "{team} is building up from the midfield with short passes.",
+          "{team} shifts the play forward, entering the opponent's half.",
+          "{team} dictates the tempo of the match in the middle of the pitch.",
+          "{team} moves the ball quickly through the midfield."
+        ],
+        midfield_pass_fail: [
+          "{opp_team} intercepts the ball in midfield and launches a counter.",
+          "A poor pass from {team} allows {opp_team} to recover possession.",
+          "{opp_team} applies high pressure and successfully wins the ball back.",
+          "{team} tries to build up but the pass is cut off by {opp_team}."
+        ],
+        attack_creation_success: [
+          "{team} is passing sharply near the opponent's penalty area.",
+          "{player} beats his marker with a neat skill move and looks to cross!",
+          "{team} stretches the defense, pushing into a dangerous area!",
+          "{player} gets on the ball and drives directly into the box!"
+        ],
+        attack_creation_fail: [
+          "{opp_team} defense reads the play well and intercepts the pass.",
+          "{player} tries to penetrate the box but is tackled successfully.",
+          "High intensity defending from {opp_team} forces a turnover.",
+          "{team} attempts to build down the wing, but the ball is cleared."
+        ]
+      }
+    };
+
+    if (this.buildupPhase === 0) {
+      // Phase 0: Midfield Buildup
+      const passer = this._pickStarPlayer(attackingTeam, 'pas');
+      const defender = this._pickStarPlayer(defendingTeam, 'def');
+      
+      let successChance = 0.52 + (passer.stats.pas - defender.stats.def) * 0.004;
+      if (isHomeAttacking && this.tacticalMode === 'attacking') successChance += 0.02;
+      if (!isHomeAttacking && this.away.tactic === 'attacking') successChance += 0.02;
+      if (isHomeAttacking && this.away.tactic === 'defensive') successChance -= 0.03;
+      if (!isHomeAttacking && this.tacticalMode === 'defensive') successChance -= 0.03;
+      successChance = Math.max(0.35, Math.min(0.85, successChance));
+
+      if (Math.random() < successChance) {
+        this.buildupPhase = 1;
+        if (isHomeAttacking) {
+          this.ballX = Math.round(58 + Math.random() * 12);
+          this.momentumHome = Math.round(55 + Math.random() * 20);
+        } else {
+          this.ballX = Math.round(42 - Math.random() * 12);
+          this.momentumHome = Math.round(45 - Math.random() * 20);
+        }
+        this.crowdVolume = 0.2 + Math.abs(this.ballX - 50) / 100;
+
+        const templates = phaseCommentaries[lang].midfield_pass_success;
+        const text = templates[Math.floor(Math.random() * templates.length)].replace("{team}", attackingTeam.name);
+        
+        event = {
+          type: 'pass',
+          minute: this.minute,
+          commentary: text,
+          team: this.possessionSide
+        };
+      } else {
+        this.possessionSide = isHomeAttacking ? 'away' : 'home';
+        this.buildupPhase = 0;
+        if (isHomeAttacking) {
+          this.ballX = Math.round(42 - Math.random() * 8);
+          this.momentumHome = Math.round(45 - Math.random() * 10);
+        } else {
+          this.ballX = Math.round(58 + Math.random() * 8);
+          this.momentumHome = Math.round(55 + Math.random() * 10);
+        }
+        this.crowdVolume = 0.2;
+
+        const templates = phaseCommentaries[lang].midfield_pass_fail;
+        const text = templates[Math.floor(Math.random() * templates.length)]
+          .replace("{team}", attackingTeam.name)
+          .replace("{opp_team}", defendingTeam.name);
+
+        event = {
+          type: 'interception',
+          minute: this.minute,
+          commentary: text,
+          team: this.possessionSide
+        };
+      }
+    } else if (this.buildupPhase === 1) {
+      // Phase 1: Attacking Third Creation
+      const creator = this._pickStarPlayer(attackingTeam, 'dri');
+      const defender = this._pickStarPlayer(defendingTeam, 'def');
+
+      let successChance = 0.48 + (creator.stats.dri - defender.stats.def) * 0.004;
+      if (isHomeAttacking && this.tacticalMode === 'attacking') successChance += 0.03;
+      if (!isHomeAttacking && this.away.tactic === 'attacking') successChance += 0.03;
+      successChance = Math.max(0.25, Math.min(0.80, successChance));
+
+      if (Math.random() < successChance) {
+        this.buildupPhase = 2;
+        if (isHomeAttacking) {
+          this.ballX = Math.round(75 + Math.random() * 15);
+          this.momentumHome = Math.round(68 + Math.random() * 20);
+        } else {
+          this.ballX = Math.round(25 - Math.random() * 15);
+          this.momentumHome = Math.round(32 - Math.random() * 20);
+        }
+        this.crowdVolume = 0.4 + Math.abs(this.ballX - 50) / 80;
+
+        const templates = phaseCommentaries[lang].attack_creation_success;
+        const text = templates[Math.floor(Math.random() * templates.length)]
+          .replace("{team}", attackingTeam.name)
+          .replace("{player}", creator.name);
+
+        event = {
+          type: 'creation',
+          minute: this.minute,
+          commentary: text,
+          team: this.possessionSide
+        };
+      } else {
+        this.possessionSide = isHomeAttacking ? 'away' : 'home';
+        this.buildupPhase = 0;
+        this.ballX = 50;
+        this.momentumHome = 50;
+        this.crowdVolume = 0.2;
+
+        const templates = phaseCommentaries[lang].attack_creation_fail;
+        const text = templates[Math.floor(Math.random() * templates.length)]
+          .replace("{opp_team}", defendingTeam.name)
+          .replace("{player}", creator.name)
+          .replace("{team}", attackingTeam.name);
+
+        event = {
+          type: 'tackle',
+          minute: this.minute,
+          commentary: text,
+          team: this.possessionSide
+        };
+      }
+    } else {
+      // Phase 2: Shot opportunity
       event = this._generateMatchEvent(isHomeAttacking, tacticalMods);
+      if (event) {
+        if (event.type === 'goal') {
+          this.possessionSide = isHomeAttacking ? 'away' : 'home';
+          this.buildupPhase = 0;
+        } else if (event.type === 'corner') {
+          this.buildupPhase = 1; // set-piece corner attack!
+        } else {
+          this.possessionSide = isHomeAttacking ? 'away' : 'home';
+          this.buildupPhase = 0;
+        }
+      } else {
+        this.buildupPhase = 0;
+      }
     }
 
     return {
@@ -610,19 +951,21 @@ export class MatchSimulator {
 
     if (isHomeAttacking) {
       const scorer = this._pickHomeStarPlayer('sho');
+      const defender = this._pickAwayStarPlayer('def');
       const cpuGk = this.away.starters[0] || { name: `${this.away.name} Kalecisi`, rating: this.away.rating, stats: { def: this.away.rating }, stamina: 100 };
       const cpuGkEff = this._getEffectiveRating(cpuGk, "GK");
 
       const shootPower = scorer.stats.sho * (0.5 + 0.5 * (scorer.stamina / 100));
-      const savePower = (cpuGk.stats ? cpuGk.stats.def : cpuGkEff) * (0.5 + 0.5 * (cpuGk.stamina / 100));
+      const defPower = defender.stats.def * (0.5 + 0.5 * (defender.stamina / 100));
+      const savePower = ((cpuGk.stats ? cpuGk.stats.def : cpuGkEff) * 0.7 + defPower * 0.3) * (0.5 + 0.5 * (cpuGk.stamina / 100));
       const goalRatio = shootPower / (shootPower + savePower || 1);
 
-      // Dynamically scaled goal threshold
-      const goalThreshold = 0.15 + (goalRatio * 0.30) + tacticalMods.homeGoalChance;
-      const saveThreshold = goalThreshold + (0.22 * (savePower / (shootPower || 1)));
-      const missThreshold = saveThreshold + 0.16;
-      const cornerThreshold = missThreshold + 0.08;
-      const offsideThreshold = cornerThreshold + 0.08;
+      // Dynamically scaled goal/shot thresholds (adjusted for higher event rate)
+      const goalThreshold = 0.08 + (goalRatio * 0.18) + tacticalMods.homeGoalChance;
+      const saveThreshold = goalThreshold + (0.28 * (savePower / (shootPower || 1)));
+      const missThreshold = saveThreshold + 0.24;
+      const cornerThreshold = missThreshold + 0.10;
+      const offsideThreshold = cornerThreshold + 0.10;
 
       if (actionRoll < goalThreshold) {
         // GOAL Home!
@@ -732,17 +1075,19 @@ export class MatchSimulator {
     } else {
       // Away attack (CPU attacks)
       const shooter = this._pickAwayStarPlayer('sho');
+      const defender = this._pickHomeStarPlayer('def');
       const userGk = this.home.starters[0] || { name: 'Kaleci', rating: 50, stats: { def: 50 }, stamina: 100 };
       const userGkEff = this._getEffectiveRating(userGk, "GK");
 
       const shootPower = shooter.stats.sho * (0.5 + 0.5 * (shooter.stamina / 100));
-      const savePower = userGkEff * (0.5 + 0.5 * (userGk.stamina / 100));
+      const defPower = defender.stats.def * (0.5 + 0.5 * (defender.stamina / 100));
+      const savePower = (userGkEff * 0.7 + defPower * 0.3) * (0.5 + 0.5 * (userGk.stamina / 100));
       const goalRatio = shootPower / (shootPower + savePower || 1);
 
-      // Dynamically scaled goal threshold
-      const awayGoalThreshold = 0.14 + (goalRatio * 0.28) + tacticalMods.awayGoalChance;
-      const saveThreshold = awayGoalThreshold + (0.24 * (savePower / (shootPower || 1)));
-      const missThreshold = saveThreshold + 0.12;
+      // Dynamically scaled goal thresholds
+      const awayGoalThreshold = 0.08 + (goalRatio * 0.16) + tacticalMods.awayGoalChance;
+      const saveThreshold = awayGoalThreshold + (0.30 * (savePower / (shootPower || 1)));
+      const missThreshold = saveThreshold + 0.20;
       const counterThreshold = missThreshold + 0.07;
       const cornerThreshold = counterThreshold + 0.07;
       const yellowThreshold = cornerThreshold + 0.10;
@@ -889,6 +1234,14 @@ export class MatchSimulator {
     const list = this.away.starters.filter(p => p !== null);
     if (!list.length) return { name: 'Rakip Oyuncu', id: null, rating: 50, stats: { pac: 50, sho: 50, pas: 50, dri: 50, def: 50, phy: 50 } };
 
+    const sorted = [...list].sort((a, b) => (b.stats[statType] || 0) - (a.stats[statType] || 0));
+    const idx = Math.min(Math.floor(Math.random() * 3), sorted.length - 1);
+    return sorted[idx];
+  }
+
+  _pickStarPlayer(team, statType) {
+    const list = team.starters.filter(p => p !== null);
+    if (!list.length) return { name: 'Oyuncu', id: null, rating: 50, stats: { pac: 50, sho: 50, pas: 50, dri: 50, def: 50, phy: 50 }, stamina: 100 };
     const sorted = [...list].sort((a, b) => (b.stats[statType] || 0) - (a.stats[statType] || 0));
     const idx = Math.min(Math.floor(Math.random() * 3), sorted.length - 1);
     return sorted[idx];

@@ -168,11 +168,12 @@
               <span class="stat-lbl" data-i18n="stat_rating">GENEL</span>
             </div>
           </div>
-          <div class="stat-indicator">
+          <div class="stat-indicator" style="position: relative;">
             <div class="stat-circle chemistry">
               <span id="stat-chemistry-value" class="stat-number">0</span>
               <span class="stat-lbl" data-i18n="stat_chemistry">KİMYA</span>
             </div>
+            <span id="btn-chem-info" style="position: absolute; top: -5px; right: -5px; background: rgba(255,255,255,0.25); border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; cursor: pointer; font-weight: bold; border: 1px solid rgba(255,255,255,0.4);" title="Kimya Nasıl Hesaplanır?">?</span>
           </div>
         </div>
 
@@ -217,7 +218,7 @@
         <div class="bench-panel glass-panel">
           <div class="bench-header">
             <h3 data-i18n="title_substitutes">Yedek Kulübesi</h3>
-            <span class="bench-counter" id="bench-count">0 / 5</span>
+            <span class="bench-counter" id="bench-count">0 / 8</span>
           </div>
           <div class="bench-slots" id="bench-slots-container">
             <!-- 5 bench slot circles -->
@@ -374,6 +375,10 @@
               <button class="tactic-btn active" data-tactic="balanced" data-i18n="tactic_balanced">Dengeli</button>
               <button class="tactic-btn" data-tactic="attacking" data-i18n="tactic_attacking">Hücum</button>
             </div>
+            <div class="autosub-controls" style="display: flex; align-items: center; gap: 0.5rem;">
+              <span class="tactic-label" data-i18n="label_autosub">OTO-DEĞİŞİKLİK</span>
+              <button id="btn-toggle-autosub" class="tactic-btn" data-i18n="btn_autosub_off" style="border-color: rgba(239, 68, 68, 0.4); color: #fca5a5;">KAPALI</button>
+            </div>
           </div>
 
           <!-- Live Match Momentum / Pressure Chart -->
@@ -410,6 +415,10 @@
 
           <!-- Tab 2: Live Squad & Performance -->
           <div id="tab-performance-content" class="tour-tab-content hidden">
+            <div class="perf-toggle-container" style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+              <button id="btn-perf-show-home" class="perf-toggle-btn active" style="flex: 1; padding: 0.5rem; font-size: 0.85rem; font-weight: 700; border-radius: 4px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.1); color: white; cursor: pointer;">Benim Takımım</button>
+              <button id="btn-perf-show-away" class="perf-toggle-btn" style="flex: 1; padding: 0.5rem; font-size: 0.85rem; font-weight: 700; border-radius: 4px; border: 1px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.2); color: rgba(255,255,255,0.6); cursor: pointer;">Rakip Takım</button>
+            </div>
             <div class="performance-list" id="match-performance-list">
               <!-- Dynamic starting players with stamina bar and performance rating -->
             </div>
@@ -483,28 +492,55 @@
           </div>
         </div>
 
-        <!-- History Table -->
+        <!-- History & Leaderboard Table -->
         <div class="history-card glass-panel">
-          <h3 class="panel-title" data-i18n="title_draft_history">Draft Geçmişi</h3>
-          <div class="table-wrapper">
-            <table class="history-table">
-              <thead>
-                <tr>
-                  <th data-i18n="th_team">Takım</th>
-                  <th data-i18n="th_rating">Genel / Kimya</th>
-                  <th data-i18n="th_result">Sonuç</th>
-                  <th data-i18n="th_date">Tarih</th>
-                </tr>
-              </thead>
-              <tbody id="history-table-body">
-                <!-- Dynamically filled by JS -->
-              </tbody>
-            </table>
+          <div class="stats-tabs" style="display: flex; gap: 0.75rem; margin-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.75rem;">
+            <button id="btn-stats-tab-history" class="tour-tab-btn active" data-i18n="tab_history">Geçmiş</button>
+            <button id="btn-stats-tab-leaderboard" class="tour-tab-btn" data-i18n="tab_leaderboard">Liderlik Tablosu</button>
+          </div>
+
+          <!-- Tab 1: History view -->
+          <div id="stats-history-view" class="tour-tab-content">
+            <div class="table-wrapper">
+              <table class="history-table">
+                <thead>
+                  <tr>
+                    <th data-i18n="th_team">Takım</th>
+                    <th data-i18n="th_rating">Genel / Kimya</th>
+                    <th data-i18n="th_result">Sonuç</th>
+                    <th data-i18n="th_date">Tarih</th>
+                  </tr>
+                </thead>
+                <tbody id="history-table-body">
+                  <!-- Dynamically filled by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Tab 2: Leaderboard view -->
+          <div id="stats-leaderboard-view" class="tour-tab-content hidden">
+            <div class="table-wrapper">
+              <table class="history-table">
+                <thead>
+                  <tr>
+                    <th style="width: 50px;">Sıra</th>
+                    <th>Menajer / Takım</th>
+                    <th style="text-align: center; width: 90px;">Kupa (🏆)</th>
+                    <th style="text-align: center; width: 90px;">Galibiyet (✌️)</th>
+                    <th style="text-align: center; width: 100px;">En Yüksek Güç (⭐)</th>
+                  </tr>
+                </thead>
+                <tbody id="leaderboard-table-body">
+                  <!-- Dynamically filled by JS -->
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="stats-footer">
+      <div class="stats-footer" style="flex-wrap: wrap; gap: 0.75rem;">
         <button id="btn-new-game" class="btn-primary">
           🎮 <span data-i18n="btn_new_game">YENİ OYUN BAŞLAT</span>
         </button>
@@ -513,6 +549,9 @@
         </button>
         <button id="btn-back-to-menu" class="btn-secondary">
           🏠 <span data-i18n="btn_back_to_menu">Ana Menüye Dön</span>
+        </button>
+        <button id="btn-reset-history" class="btn-secondary" style="border-color: rgba(239, 68, 68, 0.4); color: #fca5a5;">
+          ⚠️ <span data-i18n="btn_reset_history">Verileri Sıfırla</span>
         </button>
       </div>
     </section>
@@ -605,6 +644,33 @@
       </div>
       <div style="margin-top: 1rem; display: flex; justify-content: flex-end;">
         <button id="btn-save-squad" class="btn-primary" style="width: auto; padding: 0.75rem 2rem;">Kaydet & Kapat</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- F. OPPONENT SQUAD VIEW MODAL -->
+  <div class="modal-overlay hidden" id="modal-opponent-squad">
+    <div class="subs-container glass-panel squad-modal-container" style="max-height: 85vh; display: flex; flex-direction: column;">
+      <div class="subs-header">
+        <h2 id="opponent-squad-title">Rakip Takım Kadrosu</h2>
+        <button class="close-modal-btn" id="btn-close-opponent-squad">✕</button>
+      </div>
+      
+      <div class="subs-sections" style="flex: 1; overflow-y: auto; margin-bottom: 1rem;">
+        <!-- Starters section -->
+        <div class="subs-column" style="min-width: 250px;">
+          <h3 data-i18n="title_starters" style="position: sticky; top: 0; background: var(--bg-card); z-index: 5; padding: 0.5rem 0;">İlk 11</h3>
+          <div class="subs-list" id="opponent-starters-list">
+            <!-- Filled dynamically by JS -->
+          </div>
+        </div>
+        <!-- Bench section -->
+        <div class="subs-column" style="min-width: 250px;">
+          <h3 data-i18n="title_bench" style="position: sticky; top: 0; background: var(--bg-card); z-index: 5; padding: 0.5rem 0;">Yedekler</h3>
+          <div class="subs-list" id="opponent-bench-list">
+            <!-- Filled dynamically by JS -->
+          </div>
+        </div>
       </div>
     </div>
   </div>
