@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title data-i18n="doc_title">World Cup Draft & Simulation</title>
+  <meta name="description" content="Efsanevi Dünya Kupası kadrolarını draft edin, kendi takımınızı kurun ve şampiyonluk için simülasyona katılın!">
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Background Animated Stadium Overlay -->
+  <div class="stadium-bg"></div>
+  <div class="stadium-overlay"></div>
+
+  <!-- Confetti Canvas (for champion celebration) -->
+  <canvas id="confetti-canvas"></canvas>
+
+  <!-- Header / Navigation Bar -->
+  <header class="app-header">
+    <div class="header-logo">
+      <span class="logo-icon">🏆</span>
+      <h1 class="logo-text" data-i18n="app_title">WORLD CUP DRAFT</h1>
+    </div>
+    <div class="header-controls">
+      <!-- Language Selector Button -->
+      <button id="lang-btn" class="header-btn" title="Dili Değiştir / Change Language">
+        <span class="lang-flag">🇹🇷</span> <span class="lang-code">TR</span>
+      </button>
+      <!-- Sound Toggle Button -->
+      <button id="sound-btn" class="header-btn" title="Sesi Aç/Kapat / Mute/Unmute">
+        <span class="sound-icon">🔊</span>
+      </button>
+      <!-- Trophy Room Toggle Button -->
+      <button id="nav-stats-btn" class="header-btn" title="Kupa Odası / Trophy Cabinet">
+        <span>🏆</span> <span data-i18n="btn_trophy_room">Müze</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="app-container">
+
+    <!-- 1. START SCREEN -->
+    <section id="screen-start" class="game-screen active">
+      <div class="welcome-container">
+        <div class="welcome-badge" data-i18n="badge_new_season">DÜNYA KUPASI EFSANELERİ</div>
+        <h2 class="hero-title" data-i18n="start_hero_title">Kendi Efsane Kadronu Kur</h2>
+        <p class="hero-subtitle" data-i18n="start_hero_subtitle">Tarihin en iyi Dünya Kupası oyuncularını draft et, taktiğini belirle, turnuvayı kazan ve altın kupayı müzene götür!</p>
+      </div>
+
+      <div class="start-grid">
+        <!-- Setup Panel -->
+        <div class="setup-panel glass-panel">
+          <h3 class="panel-title" data-i18n="title_team_setup">Takım Kurulumu</h3>
+          
+          <div class="input-group">
+            <label for="input-manager" data-i18n="label_manager_name">Menajer Adı</label>
+            <input type="text" id="input-manager" placeholder="Örn. Fatih Terim" maxlength="20" required>
+          </div>
+
+          <div class="input-group">
+            <label for="input-team" data-i18n="label_team_name">Takım Adı</label>
+            <input type="text" id="input-team" placeholder="Örn. Bosphorus FC" maxlength="20" required>
+          </div>
+
+          <!-- Team Badge / Colors -->
+          <div class="badge-customizer">
+            <label data-i18n="label_team_badge">Takım Amblemi & Renkleri</label>
+            <div class="badge-selectors">
+              <div class="badge-icon-picker">
+                <span id="current-badge-emoji">🦁</span>
+                <div class="emoji-dropdown hidden" id="emoji-dropdown">
+                  <span>🦁</span><span>🦅</span><span>⚡</span><span>🔥</span><span>👑</span><span>🌟</span><span>⚔️</span><span>🐉</span><span>🐺</span><span>🐬</span>
+                </div>
+              </div>
+              <div class="color-pickers">
+                <input type="color" id="color-primary" value="#10b981" title="Ana Renk">
+                <input type="color" id="color-secondary" value="#d97706" title="İkinci Renk">
+              </div>
+            </div>
+          </div>
+
+          <!-- Perks Selection -->
+          <div class="perks-container">
+            <label data-i18n="label_manager_perk">Menajer Uzmanlığı (Perk)</label>
+            <div class="perks-grid">
+              <div class="perk-card active" data-perk="attacker">
+                <div class="perk-icon">🔥</div>
+                <div class="perk-info">
+                  <h4 data-i18n="perk_att_title">Hücum Dehası</h4>
+                  <p data-i18n="perk_att_desc">Tüm oyuncuların Şut (SHO) ve Hız (PAC) değerlerine +5 ekler.</p>
+                </div>
+              </div>
+              <div class="perk-card" data-perk="legend">
+                <div class="perk-icon">👑</div>
+                <div class="perk-info">
+                  <h4 data-i18n="perk_leg_title">Efsane Sevdalısı</h4>
+                  <p data-i18n="perk_leg_desc">2000 yılı öncesi oynayan oyunculara +5 ekstra Kimya sağlar.</p>
+                </div>
+              </div>
+              <div class="perk-card" data-perk="tactician">
+                <div class="perk-icon">🧠</div>
+                <div class="perk-info">
+                  <h4 data-i18n="perk_tac_title">Taktik Sihirbazı</h4>
+                  <p data-i18n="perk_tac_desc">Tüm oyuncuların Pas (PAS) gücüne +5 ekler ve sakatlık riskini azaltır.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Difficulty Selection -->
+          <div class="difficulty-container">
+            <label data-i18n="label_difficulty">Zorluk Seviyesi</label>
+            <div class="difficulty-grid">
+              <div class="diff-card" data-diff="easy">
+                <span class="diff-icon">🟢</span>
+                <span class="diff-label" data-i18n="diff_easy">Kolay</span>
+              </div>
+              <div class="diff-card active" data-diff="normal">
+                <span class="diff-icon">🟡</span>
+                <span class="diff-label" data-i18n="diff_normal">Normal</span>
+              </div>
+              <div class="diff-card" data-diff="legend">
+                <span class="diff-icon">🔴</span>
+                <span class="diff-label" data-i18n="diff_legend">Efsane</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Formations Panel -->
+        <div class="formations-panel glass-panel">
+          <h3 class="panel-title" data-i18n="title_choose_formation">Taktik Diziliş Seçimi</h3>
+          <div class="formations-grid" id="formations-list">
+            <!-- Formations dynamically added by JS -->
+          </div>
+          
+          <button id="btn-start-game" class="btn-primary ripple-btn disabled" disabled>
+            <span data-i18n="btn_start_draft">DRAFT'A BAŞLA</span> ➔
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. DRAFT BOARD SCREEN -->
+    <section id="screen-draft" class="game-screen hidden">
+      <div class="draft-header glass-panel">
+        <div class="draft-meta">
+          <div class="meta-item">
+            <span class="meta-label" data-i18n="label_team">TAKIM</span>
+            <span id="draft-team-name" class="meta-value">-</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label" data-i18n="label_perk">UZMANLIK</span>
+            <span id="draft-team-perk" class="meta-value">-</span>
+          </div>
+        </div>
+        
+        <div class="draft-stats">
+          <div class="stat-indicator">
+            <div class="stat-circle rating">
+              <span id="stat-rating-value" class="stat-number">0</span>
+              <span class="stat-lbl" data-i18n="stat_rating">GENEL</span>
+            </div>
+          </div>
+          <div class="stat-indicator">
+            <div class="stat-circle chemistry">
+              <span id="stat-chemistry-value" class="stat-number">0</span>
+              <span class="stat-lbl" data-i18n="stat_chemistry">KİMYA</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="draft-actions">
+          <button id="btn-reset-draft" class="btn-secondary">🔄 <span data-i18n="btn_reset">Sıfırla</span></button>
+          <button id="btn-to-tournament" class="btn-primary disabled" disabled>
+            <span data-i18n="btn_start_tournament">TURNUVAYA GİR</span> ➔
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Layout: Field + Bench -->
+      <div class="draft-board-layout">
+        <!-- Tactical Field Container -->
+        <div class="field-container glass-panel">
+          <div class="football-pitch" id="pitch">
+            <!-- Swap Overlay Banner -->
+            <div id="draft-swap-hint" class="swap-hint-banner hidden">
+              <span class="hint-icon">🔁</span>
+              <span id="draft-swap-hint-text">Yer değiştirmek için başka bir oyuncu seçin</span>
+            </div>
+
+            <!-- Central Circle and Goal Lines -->
+            <div class="pitch-markings">
+              <div class="pitch-center-circle"></div>
+              <div class="pitch-center-line"></div>
+              <div class="pitch-penalty-area top"></div>
+              <div class="pitch-penalty-area bottom"></div>
+            </div>
+
+            <!-- Glowing SVG Chemistry Lines -->
+            <svg class="chemistry-svg" id="chemistry-lines"></svg>
+
+            <!-- Starters Pitch Slots -->
+            <div class="pitch-slots" id="pitch-slots-container">
+              <!-- Dynamically rendered pitch positions based on formation -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Bench/Substitutes Panel -->
+        <div class="bench-panel glass-panel">
+          <div class="bench-header">
+            <h3 data-i18n="title_substitutes">Yedek Kulübesi</h3>
+            <span class="bench-counter" id="bench-count">0 / 5</span>
+          </div>
+          <div class="bench-slots" id="bench-slots-container">
+            <!-- 5 bench slot circles -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. TOURNAMENT BRACKET SCREEN -->
+    <section id="screen-tournament" class="game-screen hidden">
+      <div class="tournament-header glass-panel">
+        <h2 data-i18n="title_world_cup_tournament">Dünya Kupası Turnuvası</h2>
+        <p data-i18n="subtitle_world_cup_tournament">16 Efsane takım arasında şampiyonluğa ulaşın. Maçları simüle edin!</p>
+      </div>
+
+      <!-- Tab Buttons for Group vs Knockout -->
+      <div class="tournament-tabs">
+        <button id="btn-tab-groups" class="tour-tab-btn active" data-tab="groups-view" data-i18n="tab_groups">Grup Aşaması</button>
+        <button id="btn-tab-bracket" class="tour-tab-btn" data-tab="bracket-view" data-i18n="tab_bracket">Eleme Aşaması</button>
+      </div>
+
+      <div class="tournament-layout">
+        <!-- Tournament Main Area containing tabs content -->
+        <div class="tournament-main-area">
+          <!-- A. Group Stage View -->
+          <div id="groups-view" class="tour-tab-content active">
+            <div class="groups-grid" id="groups-grid-container">
+              <!-- 4 groups standings tables will be rendered here dynamically -->
+            </div>
+          </div>
+
+          <!-- B. Knockout Bracket View -->
+          <div id="bracket-view" class="tour-tab-content hidden">
+            <div class="bracket-container glass-panel">
+              <div class="bracket-stage" data-stage="qf">
+                <h4 data-i18n="stage_qf">Çeyrek Final</h4>
+                <div class="match-pairings" id="bracket-qf"></div>
+              </div>
+              <div class="bracket-stage" data-stage="sf">
+                <h4 data-i18n="stage_sf">Yarı Final</h4>
+                <div class="match-pairings" id="bracket-sf"></div>
+              </div>
+              <div class="bracket-stage" data-stage="final">
+                <h4 data-i18n="stage_final">FİNAL</h4>
+                <div class="match-pairings" id="bracket-final"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tournament Operations Sidebar -->
+        <div class="tournament-sidebar glass-panel">
+          <div class="sidebar-squad-preview">
+            <h3 data-i18n="title_your_squad">Takımınız</h3>
+            <div class="preview-stats">
+              <div class="prev-stat-box"><strong id="tour-rating">85</strong><span data-i18n="stat_rating">Genel</span></div>
+              <div class="prev-stat-box"><strong id="tour-chem">95</strong><span data-i18n="stat_chemistry">Kimya</span></div>
+            </div>
+            <div class="mini-kit-preview" id="team-kit-preview" style="margin-bottom: 0.5rem;">
+              <div class="kit-shirt">👕</div>
+              <span id="kit-team-name">My Team</span>
+            </div>
+            <button id="btn-edit-squad" class="btn-secondary btn-sm" style="width:100%;" data-i18n="btn_edit_squad">Kadro Düzenle</button>
+          </div>
+
+          <div class="tournament-status-card">
+            <h4 data-i18n="title_next_match">Sıradaki Maç</h4>
+            <div class="vs-pairing-display">
+              <div class="vs-team home">
+                <span class="vs-emoji" id="vs-home-emoji">🦁</span>
+                <span class="vs-name" id="vs-home-name">Our Team</span>
+              </div>
+              <span class="vs-symbol">VS</span>
+              <div class="vs-team away">
+                <span class="vs-emoji" id="vs-away-emoji">🇧🇷</span>
+                <span class="vs-name" id="vs-away-name">Brezilya 2002</span>
+              </div>
+            </div>
+            <!-- Opponent Analysis Box -->
+            <div class="vs-opponent-analysis" id="opponent-analysis-box" style="margin: 0.75rem 0; font-size: 0.8rem; background: rgba(0,0,0,0.25); padding: 0.5rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); text-align: center; color: var(--text-secondary);">
+              <!-- Filled dynamically by JS -->
+            </div>
+            <button id="btn-start-match" class="btn-primary pulse-btn">
+              ⚡ <span data-i18n="btn_simulate_match">MAÇI OYNA</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. MATCH SIMULATOR SCREEN -->
+    <section id="screen-match" class="game-screen hidden">
+      <!-- Match Top Scoreboard -->
+      <div class="scoreboard-card glass-panel">
+        <div class="score-team home">
+          <div class="team-badge-circle" id="match-home-badge" style="background: var(--primary)">🦁</div>
+          <span class="score-team-name" id="match-home-name">My Team</span>
+        </div>
+        
+        <div class="score-board">
+          <div class="match-timer" id="match-timer">00:00</div>
+          <div class="score-numbers">
+            <span id="score-home">0</span>
+            <span class="score-divider">:</span>
+            <span id="score-away">0</span>
+          </div>
+          <div class="match-stage-lbl" id="match-stage-name">Çeyrek Final</div>
+        </div>
+
+        <div class="score-team away">
+          <span class="score-team-name" id="match-away-name">Brezilya 2002</span>
+          <div class="team-badge-circle" id="match-away-badge" style="background: #eab308">🇧🇷</div>
+        </div>
+      </div>
+
+      <!-- Simulator Arena Grid -->
+      <div class="match-arena-grid">
+        <!-- Visual Simulation Pitch -->
+        <div class="visual-pitch-container glass-panel">
+          <div class="visual-stadium">
+            <div class="visual-pitch">
+              <div class="visual-center-circle"></div>
+              <div class="visual-center-line"></div>
+              <div class="visual-penalty-area left"></div>
+              <div class="visual-penalty-area right"></div>
+              
+              <!-- Soccer Ball Animation Element -->
+              <div class="soccer-ball" id="pitch-ball"></div>
+              
+              <!-- Attack Direction Indicator Overlay -->
+              <div class="attack-light" id="attack-light-overlay"></div>
+            </div>
+            
+            <!-- Crowd Noise & Heat Intensity meter -->
+            <div class="stadium-atmosphere">
+              <span class="atmos-lbl" data-i18n="label_crowd_noise">TARAFTAR ETKİSİ</span>
+              <div class="atmos-bar">
+                <div class="atmos-fill" id="crowd-bar-fill"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Speed, Tactics & Play Controls -->
+          <div class="match-controls-row">
+            <div class="match-controls">
+              <button class="match-ctrl-btn active" data-speed="1">1x</button>
+              <button class="match-ctrl-btn" data-speed="2">2x</button>
+              <button class="match-ctrl-btn" data-speed="4">5x</button>
+              <button id="btn-match-pause" class="match-ctrl-btn">⏸</button>
+            </div>
+            <div class="tactic-controls">
+              <span class="tactic-label" data-i18n="label_tactics">TAKTİK</span>
+              <button class="tactic-btn" data-tactic="defensive" data-i18n="tactic_defensive">Savunma</button>
+              <button class="tactic-btn active" data-tactic="balanced" data-i18n="tactic_balanced">Dengeli</button>
+              <button class="tactic-btn" data-tactic="attacking" data-i18n="tactic_attacking">Hücum</button>
+            </div>
+          </div>
+
+          <!-- Live Match Momentum / Pressure Chart -->
+          <div class="momentum-chart">
+            <div class="momentum-bar">
+              <div class="momentum-home" id="momentum-home-fill" style="width: 50%;"></div>
+              <div class="momentum-away" id="momentum-away-fill" style="width: 50%;"></div>
+            </div>
+            <div class="momentum-labels">
+              <span id="lbl-momentum-home">My Team (50%)</span>
+              <span data-i18n="label_momentum">Oyun Üstünlüğü</span>
+              <span id="lbl-momentum-away">Brazil 2002 (50%)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Commentary & Event Log Sidebar -->
+        <div class="commentary-sidebar glass-panel">
+          <!-- Sidebar Tabs header -->
+          <div class="sidebar-tabs">
+            <button id="tab-btn-commentary" class="sidebar-tab-btn active" data-i18n="btn_tab_commentary">Maç Anlatımı</button>
+            <button id="tab-btn-performance" class="sidebar-tab-btn" data-i18n="btn_tab_performance">Kadro & Performans</button>
+          </div>
+          
+          <!-- Tab 1: Commentary List -->
+          <div id="tab-commentary-content" class="tour-tab-content">
+            <div class="tactics-header" style="margin-bottom:0.75rem;">
+              <button id="btn-open-subs" class="btn-secondary btn-sm" style="width:100%">🔁 <span data-i18n="btn_quick_sub">Oyuncu Değiştir</span></button>
+            </div>
+            <div class="commentary-list" id="commentary-list">
+              <!-- Dynamic comments injected by JS -->
+            </div>
+          </div>
+
+          <!-- Tab 2: Live Squad & Performance -->
+          <div id="tab-performance-content" class="tour-tab-content hidden">
+            <div class="performance-list" id="match-performance-list">
+              <!-- Dynamic starting players with stamina bar and performance rating -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Post-Match Button Overlay (Transitions to tournament / exit) -->
+      <div class="post-match-overlay hidden" id="post-match-panel">
+        <div class="post-match-card glass-panel">
+          <h2 id="match-result-title">TEBRİKLER! KAZANDINIZ</h2>
+          <p id="match-result-subtitle">Takımınız yarı finale yükseldi.</p>
+          
+          <!-- Detailed Post-Match Stats -->
+          <div class="post-match-stats-detailed" id="post-match-stats-boxes">
+            <!-- stats filled by JS -->
+          </div>
+
+          <!-- Goal Scorers -->
+          <div class="post-match-scorers" id="post-match-scorers">
+            <!-- filled by JS -->
+          </div>
+
+          <button id="btn-match-continue" class="btn-primary">
+            <span data-i18n="btn_continue">Devam Et</span> ➔
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. TROPHY CABINET & STATS SCREEN -->
+    <section id="screen-stats" class="game-screen hidden">
+      <div class="stats-header glass-panel">
+        <h2 data-i18n="title_hall_of_fame">Efsaneler Müzesi</h2>
+        <p data-i18n="subtitle_hall_of_fame">Kazandığınız kupalar, tarihsel başarılarınız ve rekorlarınız burada listelenir.</p>
+      </div>
+
+      <!-- Visual Trophy Shelf -->
+      <div class="trophy-shelf-section glass-panel">
+        <h3 class="panel-title" data-i18n="title_trophy_cabinet">Kupa Dolabı</h3>
+        <div class="trophy-cabinet" id="trophy-cabinet">
+          <!-- Rendered dynamically as SVG cups on virtual wood shelves -->
+        </div>
+      </div>
+
+      <div class="stats-records-grid">
+        <!-- Records Card -->
+        <div class="records-card glass-panel">
+          <h3 class="panel-title" data-i18n="title_personal_records">Kişisel Rekorlar</h3>
+          <div class="records-list">
+            <div class="record-item">
+              <span class="record-lbl" data-i18n="rec_total_drafts">Toplam Draft</span>
+              <span class="record-val" id="rec-total-drafts">0</span>
+            </div>
+            <div class="record-item">
+              <span class="record-lbl" data-i18n="rec_trophies_won">Kazanılan Kupalar</span>
+              <span class="record-val" id="rec-trophies-won">0</span>
+            </div>
+            <div class="record-item">
+              <span class="record-lbl" data-i18n="rec_highest_rating">En Yüksek Kadro Gücü</span>
+              <span class="record-val" id="rec-highest-rating">0</span>
+            </div>
+            <div class="record-item">
+              <span class="record-lbl" data-i18n="rec_highest_chem">En Yüksek Kimya</span>
+              <span class="record-val" id="rec-highest-chem">0</span>
+            </div>
+            <div class="record-item">
+              <span class="record-lbl" data-i18n="rec_total_wins">Toplam Maç Galibiyeti</span>
+              <span class="record-val" id="rec-total-wins">0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- History Table -->
+        <div class="history-card glass-panel">
+          <h3 class="panel-title" data-i18n="title_draft_history">Draft Geçmişi</h3>
+          <div class="table-wrapper">
+            <table class="history-table">
+              <thead>
+                <tr>
+                  <th data-i18n="th_team">Takım</th>
+                  <th data-i18n="th_rating">Genel / Kimya</th>
+                  <th data-i18n="th_result">Sonuç</th>
+                  <th data-i18n="th_date">Tarih</th>
+                </tr>
+              </thead>
+              <tbody id="history-table-body">
+                <!-- Dynamically filled by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats-footer">
+        <button id="btn-new-game" class="btn-primary">
+          🎮 <span data-i18n="btn_new_game">YENİ OYUN BAŞLAT</span>
+        </button>
+        <button id="btn-stats-back" class="btn-secondary">
+          ⬅️ <span data-i18n="btn_back">Geri Dön</span>
+        </button>
+        <button id="btn-back-to-menu" class="btn-secondary">
+          🏠 <span data-i18n="btn_back_to_menu">Ana Menüye Dön</span>
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- POPUPS AND MODALS -->
+
+  <!-- A. CARD PACK OPENING ANMATION MODAL -->
+  <div class="modal-overlay hidden" id="modal-pack-open">
+    <div class="pack-opening-scene">
+      <!-- Shimmering card pack -->
+      <div class="pack-wrapper" id="pack-wrapper">
+        <div class="card-pack">
+          <div class="pack-glow"></div>
+          <div class="pack-foil">
+            <span class="pack-title">WC DRAFT</span>
+            <span class="pack-subtitle">SPECIAL PACK</span>
+            <span class="pack-trophy">🏆</span>
+          </div>
+          <div class="pack-rip-line"></div>
+        </div>
+      </div>
+      <div class="pack-hint" data-i18n="hint_click_pack">Paketi Yırtmak İçin Üzerine Tıklayın!</div>
+    </div>
+  </div>
+
+  <!-- B. DRAFT SELECTION CARDS MODAL -->
+  <div class="modal-overlay hidden" id="modal-draft-selection">
+    <div class="selection-container">
+      <h2 class="selection-title"><span data-i18n="title_choose_player">Oyuncu Seçiniz</span> - <span id="selection-slot-name">ST</span></h2>
+      <div class="selection-cards-grid" id="selection-cards-grid">
+        <!-- 5 tilting player cards dynamically generated -->
+      </div>
+    </div>
+  </div>
+
+  <!-- C. LIVE IN-GAME SUBSTITUTIONS MODAL -->
+  <div class="modal-overlay hidden" id="modal-substitutions">
+    <div class="subs-container glass-panel">
+      <div class="subs-header">
+        <h2 data-i18n="title_tactical_subs">Oyuncu Değişikliği</h2>
+        <button class="close-modal-btn" id="btn-close-subs">✕</button>
+      </div>
+      <p class="subs-hint" data-i18n="hint_sub_drag">Değiştirmek istediğiniz ilk 11 oyuncusunu seçin, ardından girmek istediğiniz yedeği seçerek oyuna sürün.</p>
+      
+      <div class="subs-sections">
+        <!-- Starters section -->
+        <div class="subs-column">
+          <h3 data-i18n="title_starters">İlk 11</h3>
+          <div class="subs-list" id="subs-starters-list">
+            <!-- Filled by JS -->
+          </div>
+        </div>
+        <!-- Bench section -->
+        <div class="subs-column">
+          <h3 data-i18n="title_bench">Yedekler</h3>
+          <div class="subs-list" id="subs-bench-list">
+            <!-- Filled by JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- D. SQUAD MANAGEMENT MODAL (BETWEEN MATCHES) -->
+  <div class="modal-overlay hidden" id="modal-squad-management">
+    <div class="subs-container glass-panel squad-modal-container">
+      <div class="subs-header">
+        <h2 data-i18n="title_tactical_subs">Kadro & Taktik Düzenleme</h2>
+        <button class="close-modal-btn" id="btn-close-squad">✕</button>
+      </div>
+      <p class="subs-hint" data-i18n="hint_sub_drag">İlk 11'den bir oyuncu seçin, ardından yedeklerden bir oyuncu seçerek yerlerini değiştirin.</p>
+      
+      <div class="subs-sections">
+        <!-- Starters section -->
+        <div class="subs-column">
+          <h3 data-i18n="title_starters">İlk 11</h3>
+          <div class="subs-list" id="squad-starters-list">
+            <!-- Filled dynamically by JS -->
+          </div>
+        </div>
+        <!-- Bench section -->
+        <div class="subs-column">
+          <h3 data-i18n="title_bench">Yedekler</h3>
+          <div class="subs-list" id="squad-bench-list">
+            <!-- Filled dynamically by JS -->
+          </div>
+        </div>
+      </div>
+      <div style="margin-top: 1rem; display: flex; justify-content: flex-end;">
+        <button id="btn-save-squad" class="btn-primary" style="width: auto; padding: 0.75rem 2rem;">Kaydet & Kapat</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- E. MATCH REWARD PACK MODAL -->
+  <div class="modal-overlay hidden" id="modal-reward-pack">
+    <div class="selection-container" style="max-width: 800px;">
+      <div class="reward-scene" id="reward-pack-opening">
+        <h2 class="selection-title" data-i18n="title_reward_pack">Maç Sonu Ödül Paketi!</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 1.5rem;" data-i18n="desc_reward_pack">Tebrikler! Takımınızı güçlendirmek için yeni bir oyuncu paketi kazandınız.</p>
+        <div class="pack-wrapper" id="reward-pack-wrapper" style="margin: 2rem auto;">
+          <div class="card-pack" style="border-color: var(--secondary); box-shadow: 0 10px 25px rgba(0,0,0,0.5), 0 0 20px var(--secondary-glow);">
+            <div class="pack-glow" style="background: radial-gradient(circle, rgba(217, 119, 6, 0.15) 0%, transparent 60%);"></div>
+            <div class="pack-foil">
+              <span class="pack-title">VICTORY</span>
+              <span class="pack-subtitle">REWARD PACK</span>
+              <span class="pack-trophy">🏅</span>
+            </div>
+            <div class="pack-rip-line"></div>
+          </div>
+        </div>
+        <div class="pack-hint" data-i18n="hint_click_pack">Paketi Açmak İçin Tıklayın!</div>
+      </div>
+
+      <div class="reward-scene hidden" id="reward-player-selection">
+        <h2 class="selection-title" data-i18n="title_choose_reward">Yeni Oyuncunuzu Seçin</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 1.5rem;" data-i18n="desc_choose_reward">Aşağıdaki 3 oyuncudan birini seçip kadronuzdaki bir oyuncuyla takas edebilirsiniz.</p>
+        <div class="reward-pack-cards" id="reward-cards-container">
+          <!-- 3 player cards will be rendered here -->
+        </div>
+        <div class="reward-actions">
+          <button id="btn-skip-reward" class="btn-secondary" style="flex:1;">Geç / Discard</button>
+        </div>
+      </div>
+
+      <!-- Swap interface inside reward modal -->
+      <div class="reward-scene hidden" id="reward-swap-interface">
+        <h2 class="selection-title" data-i18n="title_swap_player">Kadroda Değiştirilecek Oyuncuyu Seçin</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 1.5rem;" id="reward-swap-desc">Yeni oyuncu: Name (POS). Kadronuzda yerini almasını istediğiniz oyuncuya tıklayın.</p>
+        
+        <div style="display: flex; gap: 1.5rem; width: 100%; max-height: 50vh; overflow-y: auto; text-align: left; margin-bottom: 1.5rem;">
+          <div style="flex: 1;">
+            <h3 style="margin-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.25rem;">İlk 11</h3>
+            <div class="subs-list" id="reward-starters-list"></div>
+          </div>
+          <div style="flex: 1;">
+            <h3 style="margin-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.25rem;">Yedekler</h3>
+            <div class="subs-list" id="reward-bench-list"></div>
+          </div>
+        </div>
+        <div class="reward-actions">
+          <button id="btn-cancel-swap" class="btn-secondary" style="flex:1;">Geri Dön / Back</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Interactive JavaScript Scripts -->
+  <script type="module" src="js/i18n.js"></script>
+  <script type="module" src="js/data.js"></script>
+  <script type="module" src="js/audio.js"></script>
+  <script type="module" src="js/simulator.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
