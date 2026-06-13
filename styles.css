@@ -753,7 +753,6 @@ body {
 .football-pitch {
   width: 100%;
   max-width: 780px;
-  min-width: 680px;
   aspect-ratio: 4 / 3;
   margin: 0 auto;
   background-color: var(--bg-pitch);
@@ -875,11 +874,16 @@ body {
   justify-content: center;
   cursor: pointer;
   z-index: 2;
-  transition: transform 0.2s ease;
+  transition: transform 0.2s ease, z-index 0.1s ease;
 }
 
 .pitch-slot:hover {
   transform: translate(-50%, -50%) scale(1.06);
+  z-index: 20 !important;
+}
+
+.pitch-slot:has(.swap-selected) {
+  z-index: 30 !important;
 }
 
 .pitch-slot.locked {
@@ -3313,5 +3317,279 @@ body {
   display: flex;
   align-items: center;
   gap: 2px;
+}
+
+/* ======================================================= */
+/* 15. COMPREHENSIVE MOBILE RESPONSIVENESS AND CARD LAYERS */
+/* ======================================================= */
+
+@media (max-width: 950px) {
+  /* Bench slots as a grid on tablet/mobile */
+  .bench-slots {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)) !important;
+    gap: 0.75rem !important;
+    max-height: none !important;
+    overflow-y: visible !important;
+    padding-right: 0 !important;
+  }
+  
+  .bench-slot {
+    flex-direction: column !important;
+    text-align: center !important;
+    gap: 0.4rem !important;
+    padding: 0.5rem 0.25rem !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  
+  .bench-slot .fut-card {
+    margin: 0 auto !important;
+  }
+  
+  .bench-slot .bench-lbl-empty {
+    font-size: 0.75rem !important;
+    margin-top: 0.25rem !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-container {
+    padding: 1rem !important;
+  }
+  
+  .app-header {
+    padding: 0.75rem 1rem !important;
+  }
+  
+  .logo-text {
+    font-size: 1.25rem !important;
+  }
+  
+  .welcome-container {
+    margin-bottom: 1.5rem !important;
+  }
+  
+  .hero-title {
+    font-size: 2.2rem !important;
+  }
+  
+  .hero-subtitle {
+    font-size: 0.95rem !important;
+  }
+  
+  /* Field Container: Allow horizontal scrolling ONLY when absolutely necessary, otherwise scale */
+  .field-container {
+    padding: 0.5rem !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* Medium mobile card sizing */
+  .pitch-slot .fut-card {
+    width: 68px !important;
+    height: 95px !important;
+    padding: 0.35rem 0.2rem !important;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.4) !important;
+  }
+
+  .pitch-slot .card-rating { font-size: 0.95rem !important; }
+  .pitch-slot .card-pos { font-size: 0.5rem !important; }
+  .pitch-slot .card-avatar { font-size: 1.4rem !important; }
+  .pitch-slot .card-name { font-size: 0.55rem !important; max-width: 60px !important; padding-bottom: 0.05rem !important; }
+  .pitch-slot .card-year-nation { font-size: 0.45rem !important; gap: 0.1rem !important; }
+  .pitch-slot .card-flag-img { width: 14px !important; height: 9px !important; }
+  .pitch-slot .card-flag { font-size: 0.65rem !important; }
+  .pitch-slot .card-chem-badge { font-size: 0.45rem !important; padding: 0.1rem 0.2rem !important; top: 3px !important; right: 3px !important; }
+  .pitch-slot .card-form-arrow { width: 12px !important; height: 12px !important; font-size: 0.5rem !important; bottom: 3px !important; right: 3px !important; }
+  .slot-bubble {
+    width: 56px !important;
+    height: 56px !important;
+  }
+  .slot-plus {
+    font-size: 1rem !important;
+  }
+  .slot-pos-label {
+    font-size: 0.65rem !important;
+    padding: 0.05rem 0.25rem !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .hero-title {
+    font-size: 1.8rem !important;
+  }
+  
+  .scoreboard-card {
+    padding: 0.75rem 1rem !important;
+    gap: 0.5rem !important;
+  }
+  
+  .score-team {
+    gap: 0.5rem !important;
+  }
+  
+  .score-team-name {
+    font-size: 1rem !important;
+  }
+  
+  .team-badge-circle {
+    width: 42px !important;
+    height: 42px !important;
+    font-size: 1.4rem !important;
+  }
+  
+  .score-numbers {
+    font-size: 2rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-container {
+    padding: 0.5rem !important;
+  }
+  
+  .glass-panel {
+    padding: 1rem !important;
+  }
+  
+  /* Welcome setup styling */
+  .difficulty-grid {
+    flex-wrap: wrap !important;
+  }
+  
+  .diff-card {
+    flex: 1 1 40% !important;
+  }
+  
+  /* Draft Header Info box wrapping */
+  .draft-header {
+    padding: 1rem !important;
+    gap: 1rem !important;
+  }
+  
+  .draft-meta {
+    justify-content: space-between !important;
+    width: 100% !important;
+    gap: 0.5rem !important;
+  }
+  
+  .draft-stats {
+    width: 100% !important;
+    justify-content: space-around !important;
+  }
+  
+  .draft-actions {
+    width: 100% !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+  
+  .draft-actions button {
+    width: 100% !important;
+  }
+
+  /* Micro card sizing on small phones */
+  .pitch-slot .fut-card {
+    width: 50px !important;
+    height: 70px !important;
+    padding: 0.2rem 0.1rem !important;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.4) !important;
+  }
+
+  .pitch-slot .card-rating { font-size: 0.75rem !important; }
+  .pitch-slot .card-pos { font-size: 0.45rem !important; }
+  .pitch-slot .card-avatar { font-size: 1.1rem !important; margin: 0 auto !important; }
+  .pitch-slot .card-name { font-size: 0.45rem !important; max-width: 46px !important; border-bottom: none !important; margin-bottom: 0 !important; }
+  .pitch-slot .card-year-nation { display: none !important; }
+  .pitch-slot .card-flag-img { display: none !important; }
+  .pitch-slot .card-flag { display: none !important; }
+  .pitch-slot .card-chem-badge { font-size: 0.4rem !important; padding: 0.05rem 0.15rem !important; top: 2px !important; right: 2px !important; }
+  .pitch-slot .card-form-arrow { width: 10px !important; height: 10px !important; font-size: 0.45rem !important; bottom: 2px !important; right: 2px !important; }
+  .slot-bubble {
+    width: 42px !important;
+    height: 42px !important;
+  }
+  .slot-plus {
+    font-size: 0.8rem !important;
+  }
+  .slot-pos-label {
+    font-size: 0.55rem !important;
+    padding: 0.02rem 0.15rem !important;
+  }
+  
+  /* Bench layout grid configuration */
+  .bench-slots {
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)) !important;
+    gap: 0.5rem !important;
+  }
+
+  /* Selection Pack popup cards scaling */
+  .selection-container {
+    padding: 1rem 0.5rem !important;
+  }
+  
+  .selection-title {
+    font-size: 1.4rem !important;
+    margin-bottom: 1.25rem !important;
+  }
+  
+  .selection-cards-grid {
+    gap: 0.5rem !important;
+  }
+  
+  .selection-cards-grid .fut-card {
+    width: 110px !important;
+    height: 160px !important;
+    padding: 0.6rem 0.4rem !important;
+    border-radius: 8px !important;
+  }
+  
+  .selection-cards-grid .card-rating { font-size: 1.5rem !important; }
+  .selection-cards-grid .card-pos { font-size: 0.7rem !important; }
+  .selection-cards-grid .card-avatar { font-size: 2.4rem !important; margin: 0.2rem auto !important; }
+  .selection-cards-grid .card-name { font-size: 0.8rem !important; max-width: 100px !important; }
+  .selection-cards-grid .card-year-nation { font-size: 0.6rem !important; }
+  .selection-cards-grid .card-stats-grid { gap: 0.05rem 0.15rem !important; }
+  .selection-cards-grid .card-stat-label { font-size: 0.45rem !important; min-width: 15px !important; }
+  .selection-cards-grid .card-stat-val { font-size: 0.45rem !important; min-width: 12px !important; }
+  
+  /* Match Controls stacking */
+  .match-controls-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.75rem !important;
+  }
+  
+  .match-controls, .tactic-controls, .autosub-controls {
+    justify-content: space-between !important;
+    width: 100% !important;
+  }
+  
+  .tactic-btn {
+    flex: 1 !important;
+    text-align: center !important;
+    font-size: 0.65rem !important;
+  }
+  
+  /* Standings tables small padding */
+  .standings-table th, .standings-table td {
+    padding: 0.4rem 0.25rem !important;
+    font-size: 0.75rem !important;
+  }
+  
+  .score-team-name {
+    font-size: 0.85rem !important;
+  }
+  
+  .score-numbers {
+    font-size: 1.6rem !important;
+  }
+  
+  .team-badge-circle {
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 1.2rem !important;
+  }
 }
 
