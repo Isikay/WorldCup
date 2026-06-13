@@ -127,7 +127,7 @@ export class MatchSimulator {
     this.crowdVolume = 0.2;
     this.isOver = false;
     this.substitutionsUsed = 0;
-    this.maxSubs = 8;
+    this.maxSubs = 5;
 
     this.homeSubsUsed = 0;
     this.awaySubsUsed = 0;
@@ -645,33 +645,22 @@ export class MatchSimulator {
     // Fulltime check
     if (this.minute >= 90) {
       this.minute = 90;
-      this.isOver = true;
       this.ballX = 50;
 
-      // Resolve draws in knockout
+      // Resolve draws in knockout via penalty shootout
       if (this.isKnockout && this.home.score === this.away.score) {
-        const homePenScores = Math.floor(Math.random() * 3) + 3;
-        const awayPenScores = Math.floor(Math.random() * 3) + 3;
+        // --- PENALTY SHOOTOUT ALGORITHM ---
+        const penResult = this._simulatePenaltyShootout();
+        this.penaltyResult = penResult; // Store for post-match display
+        this.isOver = true;
 
-        let pWinner = 'home';
-        if (homePenScores > awayPenScores) {
-          this.home.score++;
-          pWinner = 'home';
-        } else if (awayPenScores > homePenScores) {
-          this.away.score++;
-          pWinner = 'away';
-        } else {
-          // sudden death
-          if (Math.random() > 0.5) {
-            this.home.score++;
-            pWinner = 'home';
-          } else {
-            this.away.score++;
-            pWinner = 'away';
-          }
-        }
+        const pWinner = penResult.winner;
+        // Don't change main score — keep it as regulation score
+        // The penalty score is tracked separately
 
         const penWinnerName = pWinner === 'home' ? this.home.name : this.away.name;
+        const penCommentary = this._buildPenaltyCommentary(penResult);
+
         return {
           minute: 90,
           scoreHome: this.home.score,
@@ -680,14 +669,17 @@ export class MatchSimulator {
           momentumHome: 50,
           crowdVolume: 0.3,
           isOver: true,
+          penaltyResult: penResult,
           event: {
             type: 'penalties',
             minute: 90,
-            commentary: getCommentary('penalties', { player: penWinnerName }),
+            commentary: penCommentary,
             team: pWinner
           }
         };
       }
+
+      this.isOver = true;
 
       // Match summary
       const topPlayer = this._getTopPerformingPlayer();
@@ -1268,5 +1260,215 @@ export class MatchSimulator {
       homeGoals: this.home.goals,
       awayGoals: this.away.goals
     };
+  }
+
+  // ==================== PENALTY SHOOTOUT SIMULATION ====================
+
+  _simulatePenaltyShootout() {
+    // Select penalty takers: best 5 by shooting stat (excluding GK at slot 0)
+    const getTopShooters = (team, count) => {
+      const outfield = team.starters
+        .filter((p, idx) => p !== null && idx !== 0) // exclude GK slot
+        .sort((a, b) => (b.stats.sho || 70) - (a.stats.sho || 70));
+      const result = [];
+      for (let i = 0; i < count && i < outfield.length; i++) {
+        result.push(outfield[i]);
+      }
+      // If not enough outfield, add remaining starters
+      if (result.length < count) {
+        const remaining = team.starters.filter(p => p !== null && !result.includes(p));
+        for (const p of remaining) {
+          if (result.length >= count) break;
+          result.push(p);
+        }
+      }
+      return result;
+    };
+
+    const homeShooters = getTopShooters(this.home, 5);
+    const awayShooters = getTopShooters(this.away, 5);
+
+    // Get goalkeepers
+    const homeGk = this.home.starters[0] || { name: 'Kaleci', stats: { def: 60 }, stamina: 100, rating: 60 };
+    const awayGk = this.away.starters[0] || { name: 'Kaleci', stats: { def: 60 }, stamina: 100, rating: 60 };
+
+    const homeGkSaveAbility = (homeGk.stats.def || homeGk.rating || 60);
+    const awayGkSaveAbility = (awayGk.stats.def || awayGk.rating || 60);
+
+    const penaltyKicks = []; // array of { round, side, player, gk, result: 'goal'|'save'|'miss' }
+    let homeScored = 0;
+    let awayScored = 0;
+
+    // Simulate a single penalty kick
+    const takePenalty = (shooter, gkAbility) => {
+      const sho = shooter.stats.sho || 70;
+      const staminaFactor = (shooter.stamina || 50) / 100;
+
+      // Base scoring chance: 70-85% range depending on stats
+      // Higher shooting stat increases chance, higher GK ability decreases it
+      let scoreChance = 0.65 + (sho / 100) * 0.25 - (gkAbility / 100) * 0.15;
+      // Stamina effect (tired players slightly less accurate)
+      scoreChance *= (0.85 + 0.15 * staminaFactor);
+      // Clamp
+      scoreChance = Math.max(0.45, Math.min(0.92, scoreChance));
+
+      const roll = Math.random();
+      if (roll < scoreChance) {
+        return 'goal';
+      } else if (roll < scoreChance + (1 - scoreChance) * 0.6) {
+        // GK saves it (60% of failed attempts)
+        return 'save';
+      } else {
+        // Missed (hit post/over) (40% of failed attempts)
+        return 'miss';
+      }
+    };
+
+    // --- First 5 rounds ---
+    for (let round = 0; round < 5; round++) {
+      // Home team kicks
+      const homeShooter = homeShooters[round % homeShooters.length];
+      const homeResult = takePenalty(homeShooter, awayGkSaveAbility);
+      penaltyKicks.push({
+        round: round + 1,
+        side: 'home',
+        player: homeShooter.name,
+        gk: awayGk.name,
+        result: homeResult
+      });
+      if (homeResult === 'goal') homeScored++;
+
+      // Check if away team can't possibly catch up (home leads by more than remaining kicks)
+      const awayRemaining = 5 - round;
+      const homeRemaining = 4 - round; // home already took this round
+      
+      // Away team kicks
+      const awayShooter = awayShooters[round % awayShooters.length];
+      const awayResult = takePenalty(awayShooter, homeGkSaveAbility);
+      penaltyKicks.push({
+        round: round + 1,
+        side: 'away',
+        player: awayShooter.name,
+        gk: homeGk.name,
+        result: awayResult
+      });
+      if (awayResult === 'goal') awayScored++;
+
+      // After both teams have taken their kicks this round,
+      // check for early termination
+      const roundsTaken = round + 1;
+      const roundsLeft = 5 - roundsTaken;
+
+      // If one team has an insurmountable lead
+      if (homeScored > awayScored + roundsLeft) break;
+      if (awayScored > homeScored + roundsLeft) break;
+    }
+
+    // --- Sudden death if tied after 5 rounds ---
+    let suddenDeathRound = 6;
+    const maxSuddenDeath = 15; // safety cap
+    
+    while (homeScored === awayScored && suddenDeathRound <= maxSuddenDeath) {
+      // Home kicks
+      const sdHomeShooter = homeShooters[(suddenDeathRound - 1) % homeShooters.length];
+      const sdHomeResult = takePenalty(sdHomeShooter, awayGkSaveAbility);
+      penaltyKicks.push({
+        round: suddenDeathRound,
+        side: 'home',
+        player: sdHomeShooter.name,
+        gk: awayGk.name,
+        result: sdHomeResult,
+        suddenDeath: true
+      });
+      if (sdHomeResult === 'goal') homeScored++;
+
+      // Away kicks
+      const sdAwayShooter = awayShooters[(suddenDeathRound - 1) % awayShooters.length];
+      const sdAwayResult = takePenalty(sdAwayShooter, homeGkSaveAbility);
+      penaltyKicks.push({
+        round: suddenDeathRound,
+        side: 'away',
+        player: sdAwayShooter.name,
+        gk: homeGk.name,
+        result: sdAwayResult,
+        suddenDeath: true
+      });
+      if (sdAwayResult === 'goal') awayScored++;
+
+      // If one scored and other didn't → decided
+      const lastTwoKicks = penaltyKicks.slice(-2);
+      const homeKick = lastTwoKicks.find(k => k.side === 'home');
+      const awayKick = lastTwoKicks.find(k => k.side === 'away');
+      if (homeKick && awayKick) {
+        if (homeKick.result === 'goal' && awayKick.result !== 'goal') break;
+        if (awayKick.result === 'goal' && homeKick.result !== 'goal') break;
+      }
+
+      suddenDeathRound++;
+    }
+
+    // Final safety: if still tied after maxSuddenDeath, random winner
+    let winner;
+    if (homeScored > awayScored) {
+      winner = 'home';
+    } else if (awayScored > homeScored) {
+      winner = 'away';
+    } else {
+      winner = Math.random() < 0.5 ? 'home' : 'away';
+    }
+
+    return {
+      winner,
+      homeScore: homeScored,
+      awayScore: awayScored,
+      kicks: penaltyKicks,
+      homeGk: homeGk.name,
+      awayGk: awayGk.name,
+      homeName: this.home.name,
+      awayName: this.away.name
+    };
+  }
+
+  _buildPenaltyCommentary(penResult) {
+    const { kicks, homeScore, awayScore, winner, homeName, awayName } = penResult;
+    const winnerName = winner === 'home' ? homeName : awayName;
+
+    const resultEmoji = (result) => {
+      if (result === 'goal') return '✅';
+      if (result === 'save') return '🧤';
+      return '❌';
+    };
+
+    // Build kick-by-kick summary string
+    let homeKicksStr = '';
+    let awayKicksStr = '';
+    kicks.forEach(k => {
+      if (k.side === 'home') {
+        homeKicksStr += resultEmoji(k.result);
+      } else {
+        awayKicksStr += resultEmoji(k.result);
+      }
+    });
+
+    // Build detailed commentary
+    const lines = [];
+    lines.push(`⚽ PENALTILAR! Maç penaltılara gidiyor!`);
+    lines.push(`${homeName}: ${homeKicksStr} (${homeScore})`);
+    lines.push(`${awayName}: ${awayKicksStr} (${awayScore})`);
+
+    // Highlight hero moments
+    const lastKick = kicks[kicks.length - 1];
+    if (lastKick.result === 'goal' && lastKick.side === winner) {
+      lines.push(`🏆 ${lastKick.player} son penaltıyı gole çeviriyor! ${winnerName} KAZANDI!`);
+    } else if (lastKick.result === 'save') {
+      const saveGk = lastKick.gk;
+      lines.push(`🧤 ${saveGk} kritik kurtarış yapıyor! ${winnerName} turu geçiyor!`);
+    } else if (lastKick.result === 'miss') {
+      lines.push(`❌ ${lastKick.player} kaçırıyor! ${winnerName} penaltılarda ${homeScore}-${awayScore} kazandı!`);
+    } else {
+      lines.push(`🏆 ${winnerName} penaltılarda ${homeScore}-${awayScore} kazandı!`);
+    }
+
+    return lines.join('\n');
   }
 }

@@ -294,8 +294,27 @@ export class TournamentManager {
         const t1Name = match.team1 ? `<span class="inspectable-team" data-team-name="${match.team1.name}" style="cursor:pointer;">${t1Logo} ${match.team1.name}</span>` : "...";
         const t2Name = match.team2 ? `<span class="inspectable-team" data-team-name="${match.team2.name}" style="cursor:pointer;">${t2Logo} ${match.team2.name}</span>` : "...";
 
-        const t1Score = match.score1 !== null ? match.score1 : "";
-        const t2Score = match.score2 !== null ? match.score2 : "";
+        let t1Score = match.score1 !== null ? match.score1 : "";
+        let t2Score = match.score2 !== null ? match.score2 : "";
+
+        // Show penalty scores in bracket if match went to penalties
+        if (match.penaltyResult && match.played) {
+          const pen = match.penaltyResult;
+          // Figure out which penalty score goes to which team
+          if (match.team1 && match.team1.isUser) {
+            // team1=user=home, team2=away
+            t1Score = `${match.score1} (${pen.homeScore}p)`;
+            t2Score = `${match.score2} (${pen.awayScore}p)`;
+          } else if (match.team2 && match.team2.isUser) {
+            // team1=away, team2=user=home
+            t1Score = `${match.score1} (${pen.awayScore}p)`;
+            t2Score = `${match.score2} (${pen.homeScore}p)`;
+          } else {
+            // CPU vs CPU: home=team1, away=team2
+            t1Score = `${match.score1} (${pen.homeScore}p)`;
+            t2Score = `${match.score2} (${pen.awayScore}p)`;
+          }
+        }
 
         const t1WinnerClass = match.winner === match.team1 && match.played ? "winner" : "";
         const t2WinnerClass = match.winner === match.team2 && match.played ? "winner" : "";

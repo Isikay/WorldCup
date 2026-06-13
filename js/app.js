@@ -914,8 +914,9 @@ class GameController {
 
   displayPostMatchSummary() {
     const sim = this.currentMatchSimulator;
-    const isWin = sim.home.score > sim.away.score;
-    const isDraw = sim.home.score === sim.away.score;
+    const penResult = sim.penaltyResult || null;
+    const isWin = penResult ? penResult.winner === 'home' : sim.home.score > sim.away.score;
+    const isDraw = !penResult && sim.home.score === sim.away.score;
     const isFinal = this.tournamentRound === 5;
     const isGroupStage = this.tournamentRound < 3;
 
@@ -955,9 +956,12 @@ class GameController {
     const stats = sim.getMatchStats();
     const boxes = document.getElementById('post-match-stats-boxes');
     if (boxes) {
+      const scoreDisplay = penResult
+        ? `${sim.home.score} - ${sim.away.score} (pen: ${penResult.homeScore}-${penResult.awayScore})`
+        : `${sim.home.score} - ${sim.away.score}`;
       boxes.innerHTML = `
         <div class="post-stat-item">
-          <span class="post-stat-val">${sim.home.score} - ${sim.away.score}</span>
+          <span class="post-stat-val">${scoreDisplay}</span>
           <span class="post-stat-lbl">${i18n.t('stat_score')}</span>
         </div>
         <div class="post-stat-item">
@@ -1204,16 +1208,26 @@ class GameController {
 
     this.applyPostMatchStaminaToCpu(sim, team1, team2);
 
+    const bgPenResult = sim.penaltyResult || null;
+    let bgWinner;
+    if (bgPenResult) {
+      bgWinner = bgPenResult.winner === 'home' ? team1 : team2;
+    } else {
+      bgWinner = sim.home.score > sim.away.score ? team1 : team2;
+    }
+
     return {
       score1: sim.home.score,
       score2: sim.away.score,
-      winner: sim.home.score > sim.away.score ? team1 : team2
+      winner: bgWinner,
+      penaltyResult: bgPenResult
     };
   }
 
   handlePostMatchCompletion() {
     const sim = this.currentMatchSimulator;
-    const isWin = sim.home.score > sim.away.score;
+    const penResult = sim.penaltyResult || null;
+    const isWin = penResult ? penResult.winner === 'home' : sim.home.score > sim.away.score;
 
     this.stopConfetti();
 
@@ -1371,6 +1385,7 @@ class GameController {
         userMatch.score1 = sim.away.score;
         userMatch.score2 = sim.home.score;
       }
+      userMatch.penaltyResult = penResult;
 
       userMatch.winner = isWin ? userTeamInBracket : opponentInBracket;
 
@@ -1383,6 +1398,7 @@ class GameController {
         match.score2 = res.score2;
         match.played = true;
         match.winner = res.winner;
+        match.penaltyResult = res.penaltyResult || null;
       });
 
       if (isWin) {
