@@ -83,6 +83,21 @@ class GameController {
       audio.playClick();
       i18n.toggleLanguage();
       this.draftManager.renderFormationsList();
+      
+      // Dynamic translations updates
+      this.updateAutoSubButtonUI();
+      
+      const perkVal = document.getElementById('draft-team-perk');
+      if (perkVal && this.managerPerk) {
+        perkVal.textContent = i18n.t(`perk_${this.managerPerk}_name`);
+      }
+      
+      this.tournamentManager.updateTournamentSidebar();
+      
+      if (document.getElementById('screen-stats').classList.contains('active')) {
+        this.museumManager.renderStatsScreen();
+        this.museumManager.renderLeaderboard();
+      }
     });
 
     // Sound toggle

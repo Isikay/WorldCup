@@ -8302,44 +8302,134 @@ export function getBasePosition(pos) {
   return pos;
 }
 
-// Helper to check position matching for chemistry calculations
-// Returns true if the player can play the role without penalty
-export function isPositionCompatible(slotPos, playerPos) {
-  if (slotPos === playerPos) return true;
+// Helper to calculate rating penalty when a player is placed in a given slot
+export function getPositionPenalty(slotPos, playerPos) {
+  if (!slotPos || !playerPos) return 0;
+  if (slotPos === playerPos) return 0;
+
+  // 1. Goalkeeper check (GK is completely separate)
+  if (slotPos === "GK" || playerPos === "GK") {
+    return 45; // Huge penalty
+  }
+
+  // 2. Specific Center-back adjustments (LCB/RCB/CB) - per user feedback
+  const isCBMismatch = (
+    (slotPos === "LCB" && playerPos === "RCB") || (slotPos === "RCB" && playerPos === "LCB")
+  );
+  if (isCBMismatch) {
+    return 2; // -2 for LCB playing RCB or vice versa
+  }
+
+  const isCBNeutralMismatch = (
+    (slotPos === "CB" && ["LCB", "RCB"].includes(playerPos)) ||
+    (playerPos === "CB" && ["LCB", "RCB"].includes(slotPos))
+  );
+  if (isCBNeutralMismatch) {
+    return 1; // -1 for CB playing LCB/RCB or vice versa
+  }
 
   const baseSlot = getBasePosition(slotPos);
   const basePlayer = getBasePosition(playerPos);
-  if (baseSlot === basePlayer) return true;
-  
-  // Mapping compatibility
+  if (baseSlot === basePlayer) return 0;
+
+  // 3. Opposite sides of the same role (e.g. LW <-> RW, LB <-> RB, LWB <-> RWB, LM <-> RM, LDM <-> RDM, LAM <-> RAM)
+  const opposites = [
+    ["LW", "RW"],
+    ["LB", "RB"],
+    ["LWB", "RWB"],
+    ["LM", "RM"],
+    ["LDM", "RDM"],
+    ["LAM", "RAM"],
+    ["LCB", "RCB"],
+    ["LCM", "RCM"],
+    ["LS", "RS"]
+  ];
+  const isOpposite = opposites.some(pair => 
+    (pair.includes(slotPos) && pair.includes(playerPos)) ||
+    (pair.includes(baseSlot) && pair.includes(basePlayer))
+  );
+  if (isOpposite) {
+    return 2; // -2 for switching wings or full-back sides
+  }
+
+  // 4. Close adjustments (e.g., LW <-> LM, RW <-> RM, LWB <-> LM, RWB <-> RM, ST <-> CF, CAM <-> LAM/RAM)
+  const isClose = (
+    (slotPos === "LW" && playerPos === "LM") || (slotPos === "LM" && playerPos === "LW") ||
+    (slotPos === "RW" && playerPos === "RM") || (slotPos === "RM" && playerPos === "RW") ||
+    (slotPos === "LWB" && playerPos === "LM") || (slotPos === "LM" && playerPos === "LWB") ||
+    (slotPos === "RWB" && playerPos === "RM") || (slotPos === "RM" && playerPos === "RWB") ||
+    (slotPos === "ST" && playerPos === "CF") || (slotPos === "CF" && playerPos === "ST") ||
+    (baseSlot === "CAM" && basePlayer === "CM") || (baseSlot === "CM" && basePlayer === "CAM")
+  );
+  if (isClose) {
+    return 2; // -2 rating penalty
+  }
+
+  // 5. Compatible positions (standard list of soccer role adjacencies)
   const compat = {
-    "GK":  ["GK"],
-    "CB":  ["CB", "LCB", "RCB"],
-    "LCB": ["CB", "LCB", "RCB", "LB"],
-    "RCB": ["CB", "LCB", "RCB", "RB"],
-    "LB":  ["LB", "LWB", "LM"],
-    "RB":  ["RB", "RWB", "RM"],
-    "LWB": ["LB", "LWB", "LM"],
-    "RWB": ["RB", "RWB", "RM"],
-    "CDM": ["CDM", "CM", "CB"],
-    "CM":  ["CM", "CDM", "CAM"],
-    "LCM": ["CM", "LM", "CAM"],
-    "RCM": ["CM", "RM", "CAM"],
-    "LDM": ["CDM", "CM"],
-    "RDM": ["CDM", "CM"],
-    "CAM": ["CAM", "CF", "CM"],
-    "LAM": ["CAM", "LM", "LW"],
-    "RAM": ["CAM", "RM", "RW"],
-    "LM":  ["LM", "LW", "CM"],
-    "RM":  ["RM", "RW", "CM"],
-    "LW":  ["LW", "LM", "ST"],
-    "RW":  ["RW", "RM", "ST"],
-    "ST":  ["ST", "CF"],
-    "LS":  ["ST", "CF"],
-    "RS":  ["ST", "CF"]
+    "CB":  ["CB", "LCB", "RCB", "LB", "RB", "CDM"],
+    "LCB": ["CB", "LCB", "RCB", "LB", "LWB", "CDM"],
+    "RCB": ["CB", "LCB", "RCB", "RB", "RWB", "CDM"],
+    "LB":  ["LB", "LWB", "LM", "CB", "LCB", "RB"],
+    "RB":  ["RB", "RWB", "RM", "CB", "RCB", "LB"],
+    "LWB": ["LB", "LWB", "LM", "RB", "RWB"],
+    "RWB": ["RB", "RWB", "RM", "LB", "LWB"],
+    "CDM": ["CDM", "CM", "CB", "LDM", "RDM"],
+    "CM":  ["CM", "CDM", "CAM", "LM", "RM", "LCM", "RCM"],
+    "LCM": ["CM", "LM", "CAM", "LCM", "RCM", "CDM"],
+    "RCM": ["CM", "RM", "CAM", "LCM", "RCM", "CDM"],
+    "LDM": ["CDM", "CM", "CB", "LDM", "RDM"],
+    "RDM": ["CDM", "CM", "CB", "LDM", "RDM"],
+    "CAM": ["CAM", "CF", "CM", "LAM", "RAM", "LW", "RW", "LM", "RM", "ST"],
+    "LAM": ["CAM", "LM", "LW", "LAM", "RAM", "CM", "CF"],
+    "RAM": ["CAM", "RM", "RW", "LAM", "RAM", "CM", "CF"],
+    "LM":  ["LM", "LW", "CM", "RM", "RW", "LWB", "CAM"],
+    "RM":  ["RM", "RW", "CM", "LM", "LW", "RWB", "CAM"],
+    "LW":  ["LW", "RW", "LM", "RM", "ST", "CF", "CAM", "LAM"],
+    "RW":  ["RW", "LW", "RM", "LM", "ST", "CF", "CAM", "RAM"],
+    "ST":  ["ST", "CF", "LW", "RW", "LS", "RS", "CAM"],
+    "CF":  ["CF", "ST", "LW", "RW", "LS", "RS", "CAM"],
+    "LS":  ["ST", "CF", "LW", "RW", "LS", "RS", "CAM"],
+    "RS":  ["ST", "CF", "LW", "RW", "LS", "RS", "CAM"]
   };
 
-  return compat[slotPos] ? compat[slotPos].includes(playerPos) : false;
+  if (compat[slotPos] && compat[slotPos].includes(playerPos)) {
+    return 3; // -3 penalty for generally compatible positions
+  }
+
+  // 6. Semi-compatible categories (e.g. Defender to Midfield, Midfield to Attack)
+  const getCat = (pos) => {
+    if (["CB", "LCB", "RCB"].includes(pos)) return "CB";
+    if (["LB", "RB", "LWB", "RWB"].includes(pos)) return "FB";
+    if (["CDM", "LDM", "RDM"].includes(pos)) return "DM";
+    if (["CM", "LCM", "RCM", "LM", "RM"].includes(pos)) return "CM";
+    if (["CAM", "LAM", "RAM"].includes(pos)) return "AM";
+    if (["LW", "RW", "ST", "CF", "LS", "RS"].includes(pos)) return "ATT";
+    return "MID";
+  };
+
+  const slotCat = getCat(slotPos);
+  const playerCat = getCat(playerPos);
+
+  if (
+    (slotCat === "CB" && playerCat === "FB") || (slotCat === "FB" && playerCat === "CB") ||
+    (slotCat === "DM" && playerCat === "CB") || (slotCat === "CB" && playerCat === "DM") ||
+    (slotCat === "DM" && playerCat === "CM") || (slotCat === "CM" && playerCat === "DM") ||
+    (slotCat === "CM" && playerCat === "AM") || (slotCat === "AM" && playerCat === "CM") ||
+    (slotCat === "AM" && playerCat === "ATT") || (slotCat === "ATT" && playerCat === "AM")
+  ) {
+    return 6; // -6 penalty for semi-compatible categories
+  }
+
+  // 7. Completely out of position
+  return 15;
+}
+
+// Helper to check position matching for chemistry calculations
+// Returns true if the player can play the role without penalty (standard or close compatibility)
+export function isPositionCompatible(slotPos, playerPos) {
+  const penalty = getPositionPenalty(slotPos, playerPos);
+  return penalty <= 3;
 }
 
 export function getPlayersForCpuTeam(teamName) {

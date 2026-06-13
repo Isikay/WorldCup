@@ -1,6 +1,6 @@
 // World Cup Draft & Simulation - Match Simulator Module
 import { i18n } from './i18n.js';
-import { isPositionCompatible, getBasePosition, getPlayersForCpuTeam, formations } from './data.js';
+import { isPositionCompatible, getBasePosition, getPlayersForCpuTeam, formations, getPositionPenalty } from './data.js';
 import { getCommentary, isChainedCommentary } from './commentary.js';
 
 export class MatchSimulator {
@@ -377,23 +377,17 @@ export class MatchSimulator {
     if (player.injuryPenalty) {
       baseRating = Math.max(50, baseRating - player.injuryPenalty);
     }
-    if (player.position === slotPos) return baseRating;
+    const penalty = getPositionPenalty(slotPos, player.position);
 
-    // Zero penalty for same-position family (e.g. CM playing LCM, CB playing LCB)
-    if (getBasePosition(slotPos) === getBasePosition(player.position)) {
+    if (penalty === 0) {
       return baseRating;
     }
 
-    const compatible = isPositionCompatible(slotPos, player.position);
-    if (compatible) {
-      return baseRating - 3;
-    }
-
-    if (player.position === "GK" || slotPos === "GK") {
+    if (penalty === 45) {
       return Math.max(30, baseRating - 45);
     }
 
-    return Math.max(40, baseRating - 12);
+    return Math.max(40, baseRating - penalty);
   }
 
   _recalculateHomeWeight() {

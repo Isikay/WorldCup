@@ -1,6 +1,6 @@
 import { i18n } from './i18n.js';
 import { audio } from './audio.js';
-import { formations, playersDatabase, isPositionCompatible, getEligiblePositionsForSlot, getFlagUrl, getBasePosition } from './data.js';
+import { formations, playersDatabase, isPositionCompatible, getEligiblePositionsForSlot, getFlagUrl, getBasePosition, getPositionPenalty } from './data.js';
 
 const TIER_PROBABILITIES = [
   { tier: "icon", min: 95, max: 100, prob: 0.03 },
@@ -73,23 +73,17 @@ export class DraftManager {
     }
     
     const baseRating = player.rating + formMod;
-    if (player.position === slotPos) return baseRating;
+    const penalty = getPositionPenalty(slotPos, player.position);
 
-    // Zero penalty for same-position family (e.g. CM playing LCM, CB playing LCB)
-    if (getBasePosition(slotPos) === getBasePosition(player.position)) {
+    if (penalty === 0) {
       return baseRating;
     }
 
-    const compatible = isPositionCompatible(slotPos, player.position);
-    if (compatible) {
-      return baseRating - 3;
-    }
-
-    if (player.position === "GK" || slotPos === "GK") {
+    if (penalty === 45) {
       return Math.max(30, baseRating - 45);
     }
 
-    return Math.max(40, baseRating - 15);
+    return Math.max(40, baseRating - penalty);
   }
 
   generateCardHTML(player, additionalClass = "", slotPos = null) {

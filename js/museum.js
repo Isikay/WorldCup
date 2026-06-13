@@ -53,16 +53,16 @@ export class MuseumManager {
       5: "outcome_final"
     };
 
-    let resultText = i18n.t(outcomeLabels[this.controller.tournamentRound]);
+    let resultKey = outcomeLabels[this.controller.tournamentRound];
     if (outcome === "win" && this.controller.tournamentRound === 5) {
-      resultText = i18n.t("outcome_champ");
+      resultKey = "outcome_champ";
     }
 
     const newHistory = {
       team: `${this.controller.teamEmoji} ${this.controller.teamName}`,
       rating: this.controller.teamRating,
       chemistry: this.controller.teamChemistry,
-      result: resultText,
+      resultKey: resultKey,
       outcome: outcome,
       date: new Date().toLocaleDateString(i18n.currentLang === 'tr' ? 'tr-TR' : 'en-US')
     };
@@ -225,10 +225,11 @@ export class MuseumManager {
       tbody.innerHTML = "";
       this.controller.records.history.forEach(item => {
         const tr = document.createElement('tr');
+        const displayResult = item.resultKey ? i18n.t(item.resultKey) : (item.result || "");
         tr.innerHTML = `
           <td style="font-weight:700">${item.team}</td>
           <td>${item.rating} / ${item.chemistry}</td>
-          <td><span class="hist-outcome ${item.outcome}">${item.result}</span></td>
+          <td><span class="hist-outcome ${item.outcome}">${displayResult}</span></td>
           <td>${item.date}</td>
         `;
         tbody.appendChild(tr);
