@@ -134,6 +134,7 @@ export class MatchSimulator {
     this.awaySubbedOutPlayerIds = new Set();
     this.pendingCpuSubEvent = null;
     this.isAutoSubEnabled = false;
+    this.autoSubThreshold = 60;
     this.pendingUserAutoSubEvent = null;
 
     // Track subbed-out player IDs/names to restrict re-entry
@@ -317,7 +318,7 @@ export class MatchSimulator {
       const starter = this.home.starters[sIdx];
       if (!starter) continue;
 
-      if (starter.stamina < 50) {
+      if (starter.stamina < this.autoSubThreshold) {
         const slot = this.home.formation.slots[sIdx];
         let bestSubIdx = -1;
         let bestSubRating = -1;

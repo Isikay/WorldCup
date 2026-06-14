@@ -189,12 +189,13 @@
       <div class="draft-board-layout">
         <!-- Tactical Field Container -->
         <div class="field-container glass-panel">
+          <!-- Swap Overlay Banner -->
+          <div id="draft-swap-hint" class="swap-hint-banner hidden">
+            <span class="hint-icon">🔁</span>
+            <span id="draft-swap-hint-text">Yer değiştirmek için başka bir oyuncu seçin</span>
+          </div>
+
           <div class="football-pitch" id="pitch">
-            <!-- Swap Overlay Banner -->
-            <div id="draft-swap-hint" class="swap-hint-banner hidden">
-              <span class="hint-icon">🔁</span>
-              <span id="draft-swap-hint-text">Yer değiştirmek için başka bir oyuncu seçin</span>
-            </div>
 
             <!-- Central Circle and Goal Lines -->
             <div class="pitch-markings">
@@ -375,9 +376,16 @@
               <button class="tactic-btn active" data-tactic="balanced" data-i18n="tactic_balanced">Dengeli</button>
               <button class="tactic-btn" data-tactic="attacking" data-i18n="tactic_attacking">Hücum</button>
             </div>
-            <div class="autosub-controls" style="display: flex; align-items: center; gap: 0.5rem;">
-              <span class="tactic-label" data-i18n="label_autosub">OTO-DEĞİŞİKLİK</span>
-              <button id="btn-toggle-autosub" class="tactic-btn" data-i18n="btn_autosub_off" style="border-color: rgba(239, 68, 68, 0.4); color: #fca5a5;">KAPALI</button>
+            <div class="autosub-controls" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span class="tactic-label" data-i18n="label_autosub">OTO-DEĞİŞİKLİK</span>
+                <button id="btn-toggle-autosub" class="tactic-btn" data-i18n="btn_autosub_off" style="border-color: rgba(239, 68, 68, 0.4); color: #fca5a5;">KAPALI</button>
+              </div>
+              <div class="autosub-slider-wrapper" style="display: flex; align-items: center; gap: 0.4rem; background: rgba(0,0,0,0.2); padding: 0.25rem 0.5rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); margin-left: 0.25rem;">
+                <span class="tactic-label slider-label" data-i18n="label_autosub_threshold" style="font-size: 0.75rem; opacity: 0.8;">Eşik:</span>
+                <input type="range" id="input-autosub-threshold" min="30" max="90" step="5" value="60" class="autosub-slider" style="width: 70px; vertical-align: middle; cursor: pointer; accent-color: var(--primary);">
+                <span id="autosub-threshold-val" class="tactic-label slider-val" style="font-size: 0.75rem; color: var(--primary); font-weight: 800; min-width: 28px;">60%</span>
+              </div>
             </div>
           </div>
 
@@ -711,7 +719,7 @@
         <h2 class="selection-title" data-i18n="title_swap_player">Kadroda Değiştirilecek Oyuncuyu Seçin</h2>
         <p style="color: var(--text-secondary); margin-bottom: 1.5rem;" id="reward-swap-desc">Yeni oyuncu: Name (POS). Kadronuzda yerini almasını istediğiniz oyuncuya tıklayın.</p>
         
-        <div style="display: flex; gap: 1.5rem; width: 100%; max-height: 50vh; overflow-y: auto; text-align: left; margin-bottom: 1.5rem;">
+        <div class="reward-swap-columns">
           <div style="flex: 1;">
             <h3 style="margin-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.25rem;">İlk 11</h3>
             <div class="subs-list" id="reward-starters-list"></div>

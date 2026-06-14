@@ -753,6 +753,7 @@ body {
 .football-pitch {
   width: 100%;
   max-width: 780px;
+  min-width: 680px;
   aspect-ratio: 4 / 3;
   margin: 0 auto;
   background-color: var(--bg-pitch);
@@ -1276,10 +1277,16 @@ body {
   z-index: 1000;
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
+  overflow-y: auto;
+  padding: 2rem 1rem;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.3s ease;
+}
+
+.modal-overlay > div {
+  margin: auto;
 }
 
 .modal-overlay:not(.hidden) {
@@ -3011,6 +3018,16 @@ body {
   flex-wrap: wrap;
 }
 
+.reward-swap-columns {
+  display: flex;
+  gap: 1.5rem;
+  width: 100%;
+  max-height: 50vh;
+  overflow-y: auto;
+  text-align: left;
+  margin-bottom: 1.5rem;
+}
+
 .reward-card-wrapper {
   perspective: 1000px;
   transition: transform 0.2s ease;
@@ -3140,10 +3157,10 @@ body {
 
 /* SWAP HINT OVERLAY BANNER */
 .swap-hint-banner {
-  position: absolute;
-  top: 15px;
-  left: 50%;
-  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   background: rgba(15, 23, 42, 0.85);
   backdrop-filter: blur(6px);
   border: 1px solid var(--secondary);
@@ -3152,22 +3169,23 @@ body {
   border-radius: 20px;
   font-size: 0.8rem;
   font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  z-index: 100;
   box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+  margin: 0 auto 10px auto;
+  width: fit-content;
+  max-width: 95%;
+  text-align: center;
+  z-index: 10;
   pointer-events: none;
   animation: bannerFadeIn 0.3s ease;
 }
 
 @keyframes bannerFadeIn {
-  from { opacity: 0; transform: translate(-50%, -10px); }
-  to { opacity: 1; transform: translate(-50%, 0); }
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .swap-hint-banner.hidden {
-  display: none;
+  display: none !important;
 }
 
 /* PREMIUM COMPACT PLAYER CARD FOR MODALS */
@@ -3590,6 +3608,137 @@ body {
     width: 36px !important;
     height: 36px !important;
     font-size: 1.2rem !important;
+  }
+
+  /* Scaling reward selection cards */
+  .reward-pack-cards .fut-card {
+    width: 90px !important;
+    height: 128px !important;
+    padding: 0.5rem 0.3rem !important;
+  }
+  .reward-pack-cards {
+    gap: 0.75rem !important;
+    margin: 1rem 0 !important;
+  }
+  .reward-pack-cards .fut-card .card-rating { font-size: 1.1rem !important; }
+  .reward-pack-cards .fut-card .card-pos { font-size: 0.55rem !important; }
+  .reward-pack-cards .fut-card .card-avatar { font-size: 1.8rem !important; margin: 0.1rem auto !important; }
+  .reward-pack-cards .fut-card .card-name { font-size: 0.6rem !important; max-width: 80px !important; }
+  .reward-pack-cards .fut-card .card-year-nation { font-size: 0.5rem !important; }
+  .reward-pack-cards .fut-card .card-stats-grid { gap: 0.02rem 0.1rem !important; }
+  .reward-pack-cards .fut-card .card-stat-label { font-size: 0.4rem !important; min-width: 12px !important; }
+  .reward-pack-cards .fut-card .card-stat-val { font-size: 0.4rem !important; min-width: 10px !important; }
+
+  /* Scaling mini-player-cards inside modal mini pitches */
+  .mini-player-card {
+    width: 44px !important;
+    height: 44px !important;
+  }
+  .mini-card-badge {
+    width: 32px !important;
+    height: 32px !important;
+  }
+  .mini-avatar {
+    font-size: 1.1rem !important;
+  }
+  .mini-rating-badge {
+    font-size: 0.65rem !important;
+    padding: 0.5px 2px !important;
+    top: -2px !important;
+    right: -2px !important;
+  }
+  .mini-pos-badge {
+    font-size: 0.45rem !important;
+    bottom: -3px !important;
+  }
+  .mini-name-capsule {
+    top: 34px !important;
+    max-width: 56px !important;
+  }
+  .mini-player-name {
+    font-size: 0.45rem !important;
+    max-width: 50px !important;
+  }
+  .mini-player-meta {
+    font-size: 0.4rem !important;
+    gap: 1px !important;
+  }
+}
+
+@media (max-width: 650px) {
+  .reward-swap-columns {
+    flex-direction: column !important;
+    max-height: 60vh !important;
+  }
+}
+
+/* Custom premium range slider for Auto-Sub Threshold */
+.autosub-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.15);
+  height: 6px;
+  border-radius: 3px;
+  outline: none;
+  transition: background 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.autosub-slider:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Webkit browser thumb styling */
+.autosub-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 1.5px solid #ffffff;
+  box-shadow: 0 0 8px var(--primary-glow);
+  cursor: pointer;
+  transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275), background-color 0.2s ease;
+}
+
+.autosub-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.25);
+  background: #34d399;
+}
+
+/* Firefox thumb styling */
+.autosub-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 1.5px solid #ffffff;
+  box-shadow: 0 0 8px var(--primary-glow);
+  cursor: pointer;
+  transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275), background-color 0.2s ease;
+}
+
+.autosub-slider::-moz-range-thumb:hover {
+  transform: scale(1.25);
+  background: #34d399;
+}
+
+.autosub-slider-wrapper {
+  margin-left: auto;
+}
+
+@media (max-width: 480px) {
+  .autosub-slider-wrapper {
+    margin-left: 0;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.25rem;
+  }
+  .autosub-slider {
+    flex: 1;
+    max-width: 120px;
   }
 }
 

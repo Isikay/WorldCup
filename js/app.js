@@ -39,6 +39,7 @@ class GameController {
     this.matchIntervalId = null;
     this.isMatchPaused = false;
     this.isAutoSubEnabled = false;
+    this.autoSubThreshold = 60;
     this.subsCountThisMatch = 0;
     this.lastActiveGameScreen = "screen-start";
     this.isGameOver = false;
@@ -255,6 +256,21 @@ class GameController {
         this.updateAutoSubButtonUI();
         if (this.currentMatchSimulator) {
           this.currentMatchSimulator.isAutoSubEnabled = this.isAutoSubEnabled;
+        }
+      });
+    }
+
+    // Auto-sub threshold slider
+    const thresholdSlider = document.getElementById('input-autosub-threshold');
+    if (thresholdSlider) {
+      thresholdSlider.addEventListener('input', (e) => {
+        this.autoSubThreshold = parseInt(e.target.value, 10);
+        const valSpan = document.getElementById('autosub-threshold-val');
+        if (valSpan) {
+          valSpan.textContent = `${this.autoSubThreshold}%`;
+        }
+        if (this.currentMatchSimulator) {
+          this.currentMatchSimulator.autoSubThreshold = this.autoSubThreshold;
         }
       });
     }
@@ -701,7 +717,18 @@ class GameController {
       isKnockout
     );
     this.currentMatchSimulator.isAutoSubEnabled = this.isAutoSubEnabled;
+    this.currentMatchSimulator.autoSubThreshold = this.autoSubThreshold;
     this.updateAutoSubButtonUI();
+
+    // Update UI slider values
+    const slider = document.getElementById('input-autosub-threshold');
+    if (slider) {
+      slider.value = this.autoSubThreshold;
+    }
+    const valSpan = document.getElementById('autosub-threshold-val');
+    if (valSpan) {
+      valSpan.textContent = `${this.autoSubThreshold}%`;
+    }
 
     document.getElementById('match-home-name').textContent = this.teamName;
     document.getElementById('match-home-badge').innerHTML = `<span class="badge-emoji">${this.teamEmoji}</span>`;

@@ -145,6 +145,7 @@ const translations = {
     label_autosub: "OTO-DEĞİŞİKLİK",
     btn_autosub_on: "AÇIK",
     btn_autosub_off: "KAPALI",
+    label_autosub_threshold: "Eşik:",
 
     // Post-match stats
     stat_possession: "Topa Sahip Olma",
@@ -316,6 +317,7 @@ const translations = {
     label_autosub: "AUTO-SUB",
     btn_autosub_on: "ON",
     btn_autosub_off: "OFF",
+    label_autosub_threshold: "Threshold:",
 
     // Post-match stats
     stat_possession: "Possession",
